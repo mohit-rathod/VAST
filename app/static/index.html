@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VAST &middot; NextDim care coordinator</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1c2129;
+    --line: #2a313c;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --accent: #4493f8;
+    --step: #a371f7;
+    --model: #3fb950;
+    --tool: #d29922;
+    --note: #8b949e;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  .pill {
+    font-size: 12px; padding: 3px 9px; border-radius: 99px;
+    border: 1px solid var(--line); color: var(--muted);
+  }
+  .pill.bad { color: #f85149; border-color: #f8514955; }
+  button {
+    font: inherit; color: var(--text); cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--line);
+    padding: 7px 13px; border-radius: 8px;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  main { flex: 1; overflow-y: auto; padding: 22px 20px 8px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  .msg { margin-bottom: 18px; }
+  .who { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .bubble {
+    padding: 11px 14px; border-radius: var(--radius);
+    white-space: pre-wrap; border: 1px solid var(--line);
+  }
+  .msg.me .bubble { background: #1f6feb22; border-color: #1f6feb55; }
+  .msg.ai .bubble { background: var(--panel); }
+
+  /* the trace */
+  details.trace {
+    margin: 8px 0 0; border: 1px solid var(--line);
+    border-radius: var(--radius); background: var(--panel); overflow: hidden;
+  }
+  details.trace > summary {
+    cursor: pointer; padding: 8px 12px; font-size: 13px; color: var(--muted);
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.trace > summary::-webkit-details-marker { display: none; }
+  details.trace > summary::before { content: "\25B6"; font-size: 10px; transition: transform .12s; }
+  details.trace[open] > summary::before { transform: rotate(90deg); }
+  .steps { border-top: 1px solid var(--line); }
+
+  .step { padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: 0; }
+  .step .row { display: flex; align-items: baseline; gap: 9px; }
+  .step .t { font-size: 13.5px; }
+  .step .d {
+    margin: 6px 0 0 0; padding: 8px 10px; border-radius: 7px;
+    background: #0d1117; border: 1px solid var(--line);
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--muted); white-space: pre-wrap; word-break: break-word;
+    max-height: 320px; overflow: auto;
+  }
+  .kind {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+    padding: 2px 7px; border-radius: 5px; font-weight: 600; flex: none;
+    border: 1px solid currentColor;
+  }
+  .kind.step  { color: var(--step); }
+  .kind.model { color: var(--model); }
+  .kind.tool  { color: var(--tool); }
+  .kind.note  { color: var(--note); }
+
+  /* typed-in one at a time, so the trace reads like it happened live */
+  .step.enter { animation: slide .18s ease-out; }
+  @keyframes slide { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+  form {
+    border-top: 1px solid var(--line); background: var(--panel);
+    padding: 12px 20px 16px;
+  }
+  form .wrap { display: flex; gap: 9px; }
+  input {
+    flex: 1; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--line);
+    padding: 11px 13px; border-radius: 9px;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .banner {
+    margin: 0 0 16px; padding: 11px 14px; border-radius: var(--radius);
+    background: #f8514918; border: 1px solid #f8514955; color: #ffb3ae; font-size: 13.5px;
+  }
+  .spinner { color: var(--muted); font-size: 13px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NextDim</h1>
+  <span class="sub">care coordinator</span>
+  <span class="spacer"></span>
+  <span class="pill" id="modelPill">&nbsp;</span>
+  <button id="resetBtn" type="button">New chat</button>
+</header>
+
+<main><div class="wrap" id="log"></div></main>
+
+<form id="form">
+  <div class="wrap">
+    <input id="input" autocomplete="off" placeholder="Describe what is troubling you&hellip;" autofocus>
+    <button id="send" type="submit">Send</button>
+  </div>
+  <div class="wrap hint" id="hint">Try: &ldquo;I have chest pain&rdquo; &rarr; confirm &rarr; give your details &rarr; address &rarr; pick a day &rarr; choose a number.</div>
+</form>
+
+<script>
+// The conversation id lives in this tab only; the server keeps the agent for it.
+let sessionId = null;
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
+
+/** Append a message bubble. `who` is "me" or "ai". */
+function bubble(who, text) {
+  const el = document.createElement("div");
+  el.className = "msg " + who;
+  const label = document.createElement("div");
+  label.className = "who";
+  label.textContent = who === "me" ? "You" : "NextDim";
+  const body = document.createElement("div");
+  body.className = "bubble";
+  body.textContent = text;
+  el.append(label, body);
+  log.appendChild(el);
+  return el;
+}
+
+/** Pretty-print whatever the event carries, minus the fields we show already. */
+function detailOf(event) {
+  const skip = new Set(["kind", "title", "step_detail"]);
+  const shown = {};
+  for (const [key, value] of Object.entries(event)) {
+    if (!skip.has(key)) shown[key] = value;
+  }
+  return Object.keys(shown).length ? JSON.stringify(shown, null, 2) : "";
+}
+
+/**
+ * Draw the trace for one turn. `open` decides whether it starts expanded, so
+ * the interesting turns can show their work without a click.
+ */
+function trace(events, open) {
+  const box = document.createElement("details");
+  box.className = "trace";
+  if (open) box.open = true;
+
+  const summary = document.createElement("summary");
+  const steps = events.length;
+  summary.textContent = `${steps} step${steps === 1 ? "" : "s"}`;
+  box.appendChild(summary);
+
+  const list = document.createElement("div");
+  list.className = "steps";
+  box.appendChild(list);
+  return { box, list };
+}
+
+/** One row in the trace. */
+function stepRow(event) {
+  const row = document.createElement("div");
+  row.className = "step";
+
+  const top = document.createElement("div");
+  top.className = "row";
+  const kind = document.createElement("span");
+  kind.className = "kind " + event.kind;
+  kind.textContent = event.kind;
+  const title = document.createElement("span");
+  title.className = "t";
+  title.textContent = event.title;
+  top.append(kind, title);
+  row.appendChild(top);
+
+  const detail = detailOf(event);
+  if (detail) {
+    const pre = document.createElement("pre");
+    pre.className = "d";
+    pre.textContent = detail;
+    row.appendChild(pre);
+  }
+  return row;
+}
+
+/** Reveal the steps one at a time, so the trace reads as it happened. */
+async function playEvents(list, events) {
+  for (const event of events) {
+    const row = stepRow(event);
+    row.classList.add("enter");
+    list.appendChild(row);
+    scroll();
+    await new Promise((done) => setTimeout(done, 90));
+  }
+}
+
+function scroll() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
+
+/** Turn the server's error body into something readable. */
+async function problem(response) {
+  let text = `${response.status} ${response.statusText}`;
+  try {
+    const body = await response.json();
+    if (body.detail) text = body.detail;
+  } catch (_) { /* not json, keep the status line */ }
+  return text;
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = input.value.trim();
+  if (!message || sendBtn.disabled) return;
+
+  input.value = "";
+  sendBtn.disabled = true;
+  bubble("me", message);
+
+  const thinking = bubble("ai", "working...");
+  let response;
+  try {
+    response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, message }),
+    });
+  } catch (_) {
+    thinking.querySelector(".bubble").textContent = "Could not reach the server.";
+    sendBtn.disabled = false;
+    return;
+  }
+
+  if (!response.ok) {
+    thinking.remove();
+    showBanner(await problem(response));
+    sendBtn.disabled = false;
+    return;
+  }
+
+  const turn = await response.json();
+  sessionId = turn.session_id;
+  thinking.remove();
+
+  if (turn.events.length) {
+    const { box, list } = trace(turn.events, false);
+    bubble("ai", turn.reply);
+    log.lastElementChild.after(box);
+    await playEvents(list, turn.events);
+  } else {
+    bubble("ai", turn.reply);
+  }
+
+  if (turn.done) {
+    input.placeholder = "Booked. Start a new chat to try again.";
+    input.disabled = true;
+  }
+  sendBtn.disabled = false;
+  scroll();
+});
+
+/** A red note at the top of the log, for a missing key or a bad reply. */
+function showBanner(text) {
+  const old = log.querySelector(".banner");
+  if (old) old.remove();
+  const el = document.createElement("div");
+  el.className = "banner";
+  el.textContent = text;
+  log.prepend(el);
+}
+
+document.getElementById("resetBtn").addEventListener("click", async () => {
+  const response = await fetch("/api/reset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  if (!response.ok) return;
+  const fresh = await response.json();
+  sessionId = fresh.session_id;
+  log.innerHTML = "";
+  input.disabled = false;
+  input.placeholder = "Describe what is troubling you…";
+  bubble("ai", fresh.reply);
+  input.focus();
+});
+
+/** Show the model in use, and warn early if there is no key. */
+(async function start() {
+  const pill = document.getElementById("modelPill");
+  try {
+    const config = await (await fetch("/api/config")).json();
+    pill.textContent = config.model;
+    if (!config.ready) {
+      pill.textContent = "no API key";
+      pill.classList.add("bad");
+      showBanner(
+        "OPENAI_API_KEY is not set. Copy .env.example to .env, put your key in it, " +
+        "then restart the server."
+      );
+      sendBtn.disabled = true;
+    }
+  } catch (_) {
+    pill.textContent = "offline";
+  }
+  bubble("ai", "Welcome to the NextDim Health portal. I am your care coordinator.");
+  input.focus();
+})();
+</script>
+</body>
+</html>

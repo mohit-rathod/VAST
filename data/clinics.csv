@@ -1,0 +1,21 @@
+clinic_id,name,speciality,address,city,state,zip,latitude,longitude
+1,CardioCare Manhattan,cardiology,1200 Broadway,New York,NY,10001,40.7549,-73.9844
+2,Manhattan ENT Specialists,ENT,430 W 58th St,New York,NY,10019,40.7652,-73.9825
+3,Union Square Dermatology,dermatology,15 E 26th St,New York,NY,10010,40.7424,-73.9891
+4,Park Slope Pediatrics,pediatrics,428 7th Ave,Brooklyn,NY,11215,40.6677,-73.9855
+5,Brooklyn Orthopedic Institute,orthopedics,758 8th Ave,Brooklyn,NY,11215,40.6743,-73.977
+6,Queens Neurology Center,neurology,78-01 Jackson Heights,Queens,NY,11372,40.7496,-73.8837
+7,Bronx Gastroenterology,gastroenterology,3400 Bainbridge Ave,Bronx,NY,10467,40.8786,-73.9043
+8,Lower East Side Eye Clinic,ophthalmology,250 E Houston St,New York,NY,10014,40.7216,-73.988
+9,Midtown Urology Care,urology,425 E 61st St,New York,NY,10065,40.7649,-73.9676
+10,Williamsburg Women's Health,gynecology,200 Bedford Ave,Brooklyn,NY,11211,40.7192,-73.9587
+11,Gramercy Psychiatry Group,psychiatry,110 E 25th St,New York,NY,10010,40.7431,-73.9882
+12,Queens Endocrinology,endocrinology,94-06 Corona Plaza,Elmhurst,NY,11373,40.7455,-73.872
+13,Washington Heights Pulmonology,pulmonology,521 W 181st St,New York,NY,10033,40.8487,-73.9371
+14,Staten Island Oncology,oncology,2357 Victory Blvd,Staten Island,NY,10314,40.5806,-74.1524
+15,SoHo Surgical Practice,general surgery,200 Varick St,New York,NY,10014,40.727,-74.006
+16,Jackson Heights Nephrology,nephrology,82-11 37th Ave,Queens,NY,11372,40.7513,-73.881
+17,Cedar Hill Rheumatology,rheumatology,420 10th Ave,New York,NY,10018,40.7546,-73.9972
+18,Astoria Dental Studio,dentistry,30-77 Steinway St,Astoria,NY,11101,40.7644,-73.9205
+19,Brooklyn ENT & Hearing Center,ENT,480 5th Ave,Brooklyn,NY,11217,40.6774,-73.9813
+20,Harlem Community Health,general practice,2335 8th Ave,New York,NY,10027,40.8043,-73.9522
