@@ -1,5 +1,18 @@
 # VAST / NextDim — v0.2.3
 
+### Working Video Demo
+
+<video src="vast.mp4" controls width="100%">
+  Your browser does not support the video tag. <a href="vast.mp4">Download vast.mp4</a> to watch the working demo video.
+</video>
+
+*Watch the working video demo above (`vast.mp4`) showing the FastAPI healthcare scheduling agent, typed chat, and real-time voice interface in action.*
+
+---
+
+
+# VAST / NextDim — v0.2.3
+
 FastAPI healthcare scheduling demo with a stateful `NextDimAgent`, SQLite, typed chat, and OpenAI `gpt-realtime` voice. Voice is an interface only: STT feeds the same `/api/chat` path as typed text, and TTS speaks the agent's completed reply.
 
 ## 1. Setup
