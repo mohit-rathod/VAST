@@ -1,10 +1,12 @@
+.env
 .venv/
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+/data/*.db
+/data/*.db-wal
+/data/*.db-shm
 
-# The database is built from the CSVs by `make ingest`, so it is never committed.
-# The CSVs themselves are, otherwise a fresh clone has nothing to load.
-data/*.db
-data/*.db-wal
-data/*.db-shm
+artifacts/

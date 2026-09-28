@@ -25,13 +25,9 @@ def new_session(on_event=None) -> tuple[str, NextDimAgent]:
     return session_id, agent
 
 
-def get_session(session_id: str) -> NextDimAgent:
-    """The agent for this id, or a fresh conversation if the id is unknown.
-
-    Falling back to a new agent rather than raising keeps a reloaded page, whose
-    session id is still in the browser but gone from memory, working.
-    """
-    return SESSIONS.get(session_id) or new_session()[1]
+def get_session(session_id: str) -> NextDimAgent | None:
+    """Unknown IDs are resolved by ChatService, which returns the new real ID."""
+    return SESSIONS.get(session_id)
 
 
 def drop_session(session_id: str) -> None:

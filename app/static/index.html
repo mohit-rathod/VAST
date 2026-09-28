@@ -118,6 +118,23 @@
     background: #f8514918; border: 1px solid #f8514955; color: #ffb3ae; font-size: 13.5px;
   }
   .spinner { color: var(--muted); font-size: 13px; font-style: italic; }
+
+  #actions { width: min(100%, 780px); max-height: 34vh; overflow-y: auto; padding: 8px 12px; }
+  #actions[hidden] { display: none; }
+  .action-group + .action-group { margin-top: 10px; }
+  .action-heading { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .action-group-slot .action-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .action-group-slot button { text-align: left; white-space: normal; }
+  button.action-primary { background: var(--accent); color: #0d1117; border-color: var(--accent); font-weight: 600; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 520px) {
+    header { padding: 10px; gap: 8px; flex-wrap: wrap; }
+    header .sub { display: none; }
+    form { padding: 10px; }
+    input { min-width: 0; }
+    #actions { max-height: 36vh; }
+  }
 </style>
 </head>
 <body>
@@ -127,22 +144,27 @@
   <span class="sub">care coordinator</span>
   <span class="spacer"></span>
   <span class="pill" id="modelPill">&nbsp;</span>
+  <button id="endBtn" type="button">End chat</button>
   <button id="resetBtn" type="button">New chat</button>
 </header>
 
 <main><div class="wrap" id="log"></div></main>
 
+<div class="wrap" id="actions" aria-label="Chat actions" aria-live="polite" hidden></div>
 <form id="form">
   <div class="wrap">
     <input id="input" autocomplete="off" placeholder="Describe what is troubling you&hellip;" autofocus>
     <button id="send" type="submit">Send</button>
   </div>
-  <div class="wrap hint" id="hint">Try: &ldquo;I have chest pain&rdquo; &rarr; confirm &rarr; give your details &rarr; address &rarr; pick a day &rarr; choose a number.</div>
+  <div class="wrap hint" id="hint">Give your details &rarr; confirm your details &rarr; view bookings or book an appointment. Try &ldquo;tomorrow morning&rdquo; or &ldquo;this week&rdquo;. You can end the chat at any time.</div>
 </form>
 
+<script src="/static/chat-actions.js"></script>
 <script>
 // The conversation id lives in this tab only; the server keeps the agent for it.
 let sessionId = null;
+let busy = false;
+let closed = false;
 const log = document.getElementById("log");
 const form = document.getElementById("form");
 const input = document.getElementById("input");
@@ -231,8 +253,11 @@ async function playEvents(list, events) {
 }
 
 function scroll() {
-  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  const pane = document.querySelector("main");
+  pane.scrollTo({ top: pane.scrollHeight, behavior: "auto" });
 }
+
+window.addEventListener("resize", scroll);
 
 /** Turn the server's error body into something readable. */
 async function problem(response) {
@@ -244,56 +269,62 @@ async function problem(response) {
   return text;
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const message = input.value.trim();
-  if (!message || sendBtn.disabled) return;
+function setBusy(value) {
+  busy = value;
+  input.disabled = value || closed;
+  sendBtn.disabled = value || closed;
+  document.getElementById("endBtn").disabled = value || closed;
+  document.getElementById("resetBtn").disabled = value;
+  document.querySelectorAll("#actions button").forEach(b => b.disabled = value || closed);
+}
 
+const actionRenderer = new ChatActionRenderer(
+  document.getElementById("actions"), submitMessage, () => busy || closed
+);
+function renderActions(actions) { actionRenderer.render(actions); }
+window.addEventListener("pagehide", () => actionRenderer.destroy());
+
+async function submitMessage(message) {
+  if (!message || busy || closed) return;
+  setBusy(true);
   input.value = "";
-  sendBtn.disabled = true;
   bubble("me", message);
-
   const thinking = bubble("ai", "working...");
-  let response;
   try {
-    response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const response = await fetch("/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: sessionId, message }),
     });
-  } catch (_) {
-    thinking.querySelector(".bubble").textContent = "Could not reach the server.";
-    sendBtn.disabled = false;
-    return;
-  }
-
-  if (!response.ok) {
+    if (!response.ok) throw new Error(await problem(response));
+    const turn = await response.json();
+    sessionId = turn.session_id;
     thinking.remove();
-    showBanner(await problem(response));
-    sendBtn.disabled = false;
-    return;
-  }
-
-  const turn = await response.json();
-  sessionId = turn.session_id;
-  thinking.remove();
-
-  if (turn.events.length) {
-    const { box, list } = trace(turn.events, false);
     bubble("ai", turn.reply);
-    log.lastElementChild.after(box);
-    await playEvents(list, turn.events);
-  } else {
-    bubble("ai", turn.reply);
+    if (turn.events.length) {
+      const { box, list } = trace(turn.events, false);
+      log.lastElementChild.after(box);
+      await playEvents(list, turn.events);
+    }
+    closed = turn.done;
+    renderActions(turn.actions);
+    if (closed) {
+      input.placeholder = turn.booking ? "Booked. Start a new chat to view your bookings." : "Chat ended. Start a new chat to continue.";
+    }
+    scroll();
+  } catch (error) {
+    thinking.remove();
+    showBanner(error.message || "Could not reach the server.");
+  } finally {
+    setBusy(false);
+    if (!closed) input.focus();
   }
+}
 
-  if (turn.done) {
-    input.placeholder = "Booked. Start a new chat to try again.";
-    input.disabled = true;
-  }
-  sendBtn.disabled = false;
-  scroll();
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitMessage(input.value.trim());
 });
+document.getElementById("endBtn").addEventListener("click", () => submitMessage("end chat"));
 
 /** A red note at the top of the log, for a missing key or a bad reply. */
 function showBanner(text) {
@@ -305,41 +336,48 @@ function showBanner(text) {
   log.prepend(el);
 }
 
-document.getElementById("resetBtn").addEventListener("click", async () => {
-  const response = await fetch("/api/reset", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: sessionId }),
-  });
-  if (!response.ok) return;
-  const fresh = await response.json();
-  sessionId = fresh.session_id;
-  log.innerHTML = "";
-  input.disabled = false;
-  input.placeholder = "Describe what is troubling you…";
-  bubble("ai", fresh.reply);
-  input.focus();
-});
+async function resetChat() {
+  if (busy) return;
+  setBusy(true);
+  try {
+    const response = await fetch("/api/reset", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+    if (!response.ok) throw new Error(await problem(response));
+    const fresh = await response.json();
+    sessionId = fresh.session_id;
+    closed = false;
+    log.replaceChildren();
+    renderActions([]);
+    input.placeholder = "Enter your details, a date, or a chat command";
+    bubble("ai", fresh.reply);
+  } catch (error) {
+    showBanner(error.message || "Could not start a new chat.");
+  } finally {
+    setBusy(false);
+    if (!closed) input.focus();
+  }
+}
+document.getElementById("resetBtn").addEventListener("click", resetChat);
 
 /** Show the model in use, and warn early if there is no key. */
 (async function start() {
   const pill = document.getElementById("modelPill");
+  let configurationWarning = "";
   try {
     const config = await (await fetch("/api/config")).json();
     pill.textContent = config.model;
     if (!config.ready) {
       pill.textContent = "no API key";
       pill.classList.add("bad");
-      showBanner(
-        "OPENAI_API_KEY is not set. Copy .env.example to .env, put your key in it, " +
-        "then restart the server."
-      );
-      sendBtn.disabled = true;
+      configurationWarning = "OPENAI_API_KEY is not set. Copy .env.example to .env, put your key in it, then restart the server.";
     }
   } catch (_) {
     pill.textContent = "offline";
   }
-  bubble("ai", "Welcome to the NextDim Health portal. I am your care coordinator.");
+  await resetChat();
+  if (configurationWarning) showBanner(configurationWarning);
   input.focus();
 })();
 </script>

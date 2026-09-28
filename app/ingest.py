@@ -10,7 +10,9 @@ from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 
+from app import config  # Load .env when invoked as a command.
 from domain.models import Booking, Clinic, Patient
+from domain.phone import normalize_phone
 
 from .db import connect, init_db
 
@@ -78,6 +80,14 @@ def load(conn, table: str, columns: dict, model: type[BaseModel], path: Path) ->
     count = 0
     with path.open(newline="") as file:
         for line, raw in enumerate(csv.DictReader(file), start=2):
+            issue = None
+            if table == "patients":
+                original = raw.get("phone", "")
+                try:
+                    raw["phone"] = normalize_phone(original)
+                except ValueError as error:
+                    raw["phone"] = None
+                    issue = (original, str(error))
             try:
                 row = model.model_validate(raw).model_dump(mode="json")
             except ValidationError as error:
@@ -86,6 +96,14 @@ def load(conn, table: str, columns: dict, model: type[BaseModel], path: Path) ->
                 f"INSERT OR REPLACE INTO {table} ({names}) VALUES ({marks})",
                 [row[column] for column in columns],
             )
+            if table == "patients":
+                if issue:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO patient_phone_issues(patient_id, original_phone, reason) VALUES (?, ?, ?)",
+                        (row["patient_id"], *issue),
+                    )
+                else:
+                    conn.execute("DELETE FROM patient_phone_issues WHERE patient_id = ?", (row["patient_id"],))
             count += 1
     return count
 

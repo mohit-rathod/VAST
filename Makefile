@@ -1,16 +1,21 @@
-.PHONY: help venv install run agent ingest reingest slots book match db reset clean
+.PHONY: help venv install install-dev test test-offline audit-phones run agent ingest reingest slots book match db reset clean
 
 PY  := .venv/bin/python
 PIP := .venv/bin/pip
 
 CLINIC ?= 1
 PATIENT ?= 1
-DATE   ?= 2026-09-30
+DATE   ?= $(shell $(PY) -c "from tools.available_slots import now; print(now().date())")
+DURATION ?= 30
 TIME   ?= 09:00
 
 help:
 	@echo "make venv      - create the virtualenv"
 	@echo "make install   - install dependencies"
+	@echo "make install-dev - install test dependencies"
+	@echo "make test      - run regression tests (no live model calls)"
+	@echo "make test-offline - run with an explicit SDK import stub"
+	@echo "make audit-phones - read-only report of phone formatting/repair needs"
 	@echo "make run       - start the chat UI and API on http://127.0.0.1:8000"
 	@echo "make agent     - chat with the NextDim portal agent in the terminal"
 	@echo "make ingest    - load data/*.csv into SQLite"
@@ -44,7 +49,7 @@ slots:
 	@$(PY) -c "import json; from tools.available_slots import available_slots; print(json.dumps(available_slots($(CLINIC), '$(DATE)'), indent=2))"
 
 book:
-	@$(PY) -c "import json; from tools.book import book_appointment; print(json.dumps(book_appointment($(CLINIC), $(PATIENT), '$(DATE)', '$(TIME)'), indent=2))"
+	@$(PY) -c "import json; from tools.book import book_appointment; print(json.dumps(book_appointment($(CLINIC), $(PATIENT), '$(DATE)', '$(TIME)', duration_minutes=$(DURATION)), indent=2))"
 
 match:
 	@$(PY) -c "import json; from tools.match_clinics import suggest_clinics; print(json.dumps(suggest_clinics($(PATIENT), '$(DATE)'), indent=2))"
@@ -57,3 +62,15 @@ reset:
 
 clean: reset
 	find . -name __pycache__ -type d -prune -exec rm -rf {} +
+
+install-dev:
+	$(PIP) install -r requirements-dev.txt
+
+test:
+	$(PY) -m pytest -q
+
+test-offline:
+	VAST_TEST_STUB_OPENAI=1 $(PY) -m pytest -q
+
+audit-phones:
+	$(PY) -m scripts.audit_phones

@@ -12,4 +12,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 MODEL = os.getenv("VAST_MODEL", "gpt-4o-mini")
 
 # The release this working tree is. Bump it when the behaviour changes.
-VERSION = "0.1.0"
+VERSION = "0.2.1"
+
+
+def email_verification_required() -> bool:
+    """Retain email verification unless chat-only mode is explicitly enabled."""
+    return os.getenv("VAST_REQUIRE_EMAIL_VERIFICATION", "true").strip().lower() not in {
+        "false", "0", "no", "off",
+    }

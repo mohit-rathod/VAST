@@ -6,14 +6,16 @@ top 3 by speciality match and availability.
 """
 
 import json
-import math
 
 from openai import OpenAI
 
 from app.config import MODEL, OPENAI_API_KEY
 from app.db import connect
+from app.geo import zone_name_of
 from app.trace import MODEL as MODEL_KIND
 from app.trace import NOTE, TOOL, emit
+from repositories.clinics import SQLiteClinicRepository
+from services.clinics import ClinicService, distance_km
 
 from .available_slots import available_slots
 
@@ -29,65 +31,20 @@ SYSTEM = (
 )
 
 
-def distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance between two points."""
-    lat1, lon1, lat2, lon2 = map(math.radians, (lat1, lon1, lat2, lon2))
-    half = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(
-        (lon2 - lon1) / 2
-    ) ** 2
-    return 6371 * 2 * math.asin(math.sqrt(half))
+def _service() -> ClinicService:
+    return ClinicService(SQLiteClinicRepository(connect), available_slots, zone_name_of, distance_km)
 
 
-def nearest_clinics(patient_id: int, count: int | None = SHORTLIST) -> list[dict]:
-    """The `count` clinics closest to a patient, nearest first.
-
-    Distance does not depend on the day, so a caller can rank the clinics once
-    and then look up free slots for as many days as it likes. Pass `count` as
-    None for every clinic. The agent uses this to offer nearby times when the
-    period the patient asked for is fully booked, so it never has to pay for a
-    second ranking call.
-    """
-    with connect() as conn:
-        patient = conn.execute("SELECT * FROM patients WHERE id = ?", (patient_id,)).fetchone()
-        if patient is None:
-            raise ValueError(f"no patient {patient_id}")
-        clinics = conn.execute("SELECT * FROM clinics").fetchall()
-
-    def distance(clinic) -> float:
-        return distance_km(
-            patient["latitude"],
-            patient["longitude"],
-            clinic["latitude"],
-            clinic["longitude"],
-        )
-
-    ranked = sorted(clinics, key=distance)
-    return [
-        {
-            "clinic_id": clinic["id"],
-            "name": clinic["name"],
-            "speciality": clinic["speciality"],
-            "address": f'{clinic["address"]}, {clinic["city"]}, {clinic["state"]} {clinic["zip"]}',
-            "distance_km": round(distance(clinic), 1),
-        }
-        for clinic in (ranked if count is None else ranked[:count])
-    ]
+def nearest_clinics(
+    patient_id: int, count: int | None = SHORTLIST, speciality: str | None = None
+) -> list[dict]:
+    """The closest clinics, optionally limited and filtered by speciality."""
+    return _service().nearest(patient_id, count, speciality)
 
 
 def nearest_candidates(patient_id: int, day, count: int = SHORTLIST) -> tuple[dict, list[dict]]:
-    """The patient and the `count` closest clinics, each with its free slots that day."""
-    with connect() as conn:
-        patient = conn.execute("SELECT * FROM patients WHERE id = ?", (patient_id,)).fetchone()
-    candidates = []
-    for clinic in nearest_clinics(patient_id, count):
-        free = available_slots(clinic["clinic_id"], day)
-        candidates.append(
-            {
-                **clinic,
-                "free_slots": [f'{slot["start_time"]}-{slot["end_time"]}' for slot in free],
-            }
-        )
-    return dict(patient), candidates
+    """The patient and nearest clinics, with their free slots on the given day."""
+    return _service().candidates(patient_id, day, count)
 
 
 def suggest_clinics(patient_id: int, day, limit: int = 3, client=None, on_event=None) -> list[dict]:

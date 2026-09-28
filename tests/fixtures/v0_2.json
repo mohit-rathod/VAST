@@ -1,0 +1,2205 @@
+{
+  "api_schemas": {
+    "ChatIn": {
+      "description": "One patient message, and the conversation it belongs to.",
+      "properties": {
+        "message": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "title": "ChatIn",
+      "type": "object"
+    },
+    "ResetOut": {
+      "description": "A fresh conversation and its opening message.",
+      "properties": {
+        "reply": {
+          "title": "Reply",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "reply"
+      ],
+      "title": "ResetOut",
+      "type": "object"
+    },
+    "TurnOut": {
+      "description": "The agent's reply, plus everything it did to get there.",
+      "properties": {
+        "actions": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "booking": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Booking"
+        },
+        "bookings": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bookings"
+        },
+        "done": {
+          "title": "Done",
+          "type": "boolean"
+        },
+        "events": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "reply": {
+          "title": "Reply",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "step": {
+          "title": "Step",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "reply",
+        "step",
+        "done",
+        "events"
+      ],
+      "title": "TurnOut",
+      "type": "object"
+    }
+  },
+  "available_after_booking": [
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "09:30",
+      "start_time": "09:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "10:00",
+      "start_time": "09:30"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "10:30",
+      "start_time": "10:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "11:00",
+      "start_time": "10:30"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "11:30",
+      "start_time": "11:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "12:00",
+      "start_time": "11:30"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "12:30",
+      "start_time": "12:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "13:00",
+      "start_time": "12:30"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "13:30",
+      "start_time": "13:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "14:00",
+      "start_time": "13:30"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "14:30",
+      "start_time": "14:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "15:00",
+      "start_time": "14:30"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "15:30",
+      "start_time": "15:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "16:00",
+      "start_time": "15:30"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "16:30",
+      "start_time": "16:00"
+    },
+    {
+      "clinic_id": 3,
+      "date": "2026-09-30",
+      "end_time": "17:00",
+      "start_time": "16:30"
+    }
+  ],
+  "conversation": [
+    {
+      "reply": "Welcome to the NextDim Health portal. I am your care coordinator and I will get you in front of the right doctor. To start, could you give me your full name, the email address we would send your confirmation to, and a phone number we can reach you on? Include your country code for an international number. You can say 'end chat' at any time.",
+      "step": "details"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "details",
+          "title": "Collect the patient details"
+        },
+        {
+          "attempt": 1,
+          "input": {
+            "redacted": true
+          },
+          "kind": "model",
+          "model": "gpt-4o-mini",
+          "step_detail": "Pull the patient's details out of the message. Reply with JSON only, shaped as {\"first_name\": str|null, \"last_name\": str|null, \"email\": str|null, \"phone\": str|null, \"date_of_birth\": \"YYYY-MM-DD\"|null}. first_name and last_name: the two parts of the name as they gave them. email: the address they were sent mail at. phone: their number, with any punctuation they used. date_of_birth: only if they volunteered it, otherwise null. Use null for anything the message does not mention, and never guess or invent a value. Copy the values exactly as written.",
+          "title": "Ask the model for the name, email and phone"
+        },
+        {
+          "kind": "model",
+          "output": {
+            "redacted": true
+          },
+          "reply": "[redacted]",
+          "title": "The model answered"
+        }
+      ],
+      "message": "My details",
+      "reply": "Enter the 6-digit verification code sent to the email address already on file. It expires in 10 minutes. Your record will not be shown or changed before verification. You can request 'resend code' or 'end chat'.",
+      "step": "verify"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "verify",
+          "title": "Verify ownership of the registered email"
+        }
+      ],
+      "message": "246810",
+      "reply": "Hello Test, you are already registered with us. This is what I have on file:\n  Name: Test Patient\n  Email: test@example.test\n  Phone: +12125550100\n  Address: Home Street, New York, NY 10001\nIs all of that right? Reply yes, or tell me what to change.",
+      "step": "registry"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "registry",
+          "title": "Check the patient is registered"
+        }
+      ],
+      "message": "yes",
+      "reply": "Test, you can choose: 1. View all my bookings across all clinics; 2. Book a new appointment; 3. View all clinics. You can also say 'end chat'.",
+      "step": "menu"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "menu",
+          "title": "Choose an account action"
+        }
+      ],
+      "message": "book appointment",
+      "reply": "Thank you, Test. Now, what is the problem you would like treated? Tell me in your own words, as much or as little as you like.",
+      "step": "complaint"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "complaint",
+          "title": "Understand the problem"
+        },
+        {
+          "attempt": 1,
+          "input": {
+            "message": "Ear trouble"
+          },
+          "kind": "model",
+          "model": "gpt-4o-mini",
+          "step_detail": "You are the intake assistant of the NextDim Health portal. A patient describes a problem in their own words. Reply with JSON only, shaped as {\"description\": str, \"speciality\": str, \"understood_as\": str, \"detail\": str}. description: the complaint, cleaned up but kept in the patient's own words. speciality: exactly one of: cardiology, ENT, dermatology, pediatrics, orthopedics, neurology, gastroenterology, ophthalmology, urology, gynecology, psychiatry, endocrinology, pulmonology, oncology, general surgery, nephrology, rheumatology, dentistry, general practice. understood_as: one sentence that restates the problem back to the patient, so they can check that you understood it. detail: what is known about when it started, where it is and how bad it is, or an empty string if they have not said. If you are given what you already understood, keep it and add to it rather than starting again, and never invent a symptom they did not describe. Do not discuss attendance counts; appointment duration is handled separately by the application.",
+          "title": "Ask the model to name the speciality behind the complaint"
+        },
+        {
+          "kind": "model",
+          "output": {
+            "description": "Ear trouble",
+            "detail": "",
+            "speciality": "ENT",
+            "understood_as": "Your ear is troubling you"
+          },
+          "reply": "{\"description\": \"Ear trouble\", \"speciality\": \"ENT\", \"understood_as\": \"Your ear is troubling you\", \"detail\": \"\"}",
+          "title": "The model answered"
+        },
+        {
+          "description": "Ear trouble",
+          "detail": "",
+          "kind": "tool",
+          "round": 0,
+          "speciality": "ENT",
+          "title": "Understood the problem as ENT",
+          "understood_as": "Your ear is troubling you"
+        }
+      ],
+      "message": "Ear trouble",
+      "reply": "Here is what I understood: \"Your ear is troubling you\"\nIs that exactly your problem, or would you like to add something? Whatever you tell me here goes to the doctor you see.",
+      "step": "complaint"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "complaint",
+          "title": "Understand the problem"
+        },
+        {
+          "complaints": "Ear trouble",
+          "kind": "tool",
+          "patient_id": 1,
+          "title": "Recorded the complaint on the patient"
+        },
+        {
+          "clinic_count": 3,
+          "kind": "tool",
+          "patient_id": 1,
+          "timezone": "America/New_York",
+          "title": "Find matching nearby clinics"
+        }
+      ],
+      "message": "yes",
+      "reply": "Thank you, I have that down. That is treated by our ENT clinics, and we have 3 nearby. When would you like to come in? Appointments are open Wednesday 2026-09-30, Thursday 2026-10-01, Friday 2026-10-02, Saturday 2026-10-03 or Sunday 2026-10-04, 09:00 to 17:00 America/New_York time. A day or a weekday, and a morning, afternoon or evening, or a time of day, is enough.",
+      "step": "clinic"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "clinic",
+          "title": "Name the clinic and ask for a time"
+        },
+        {
+          "at": null,
+          "date": "2026-09-30",
+          "duration_minutes": 30,
+          "end_date": "2026-09-30",
+          "kind": "tool",
+          "period": "morning",
+          "timezone": "America/New_York",
+          "title": "Resolved the requested dates and time"
+        },
+        {
+          "at": "no fixed time",
+          "kind": "tool",
+          "options": [
+            "Clinic A 2026-09-30 10:00, 0.0 km, 6 free that day",
+            "Clinic B 2026-09-30 10:00, 9.2 km, 6 free that day",
+            "Clinic C 2026-09-30 10:00, 11.0 km, 6 free that day"
+          ],
+          "period": "morning",
+          "title": "Ranked 3 free ENT slots by distance and availability",
+          "wanted": "2026-09-30",
+          "widened": false
+        }
+      ],
+      "message": "Wednesday morning",
+      "reply": "For Wednesday 2026-09-30, 30-minute appointments:\n1. Clinic A - ENT, 0.0 km away, Wednesday 2026-09-30, 10:00 to 10:30 America/New_York time\n2. Clinic B - ENT, 9.2 km away, Wednesday 2026-09-30, 10:00 to 10:30 America/New_York time\n3. Clinic C - ENT, 11.0 km away, Wednesday 2026-09-30, 10:00 to 10:30 America/New_York time\nWhich one would you like? Reply with the number, or tell me the clinic or the time you would prefer.",
+      "step": "slots"
+    },
+    {
+      "booking": null,
+      "events": [
+        {
+          "kind": "step",
+          "step": "slots",
+          "title": "Offer clinics and slots"
+        }
+      ],
+      "message": "1",
+      "reply": "To confirm: Clinic A (ENT, 0.0 km away) on Wednesday 2026-09-30, 10:00 to 10:30 America/New_York time. Shall I book it? Reply yes to go ahead, or tell me what to change.",
+      "step": "book"
+    },
+    {
+      "booking": {
+        "booking_id": 1,
+        "clinic_id": 1,
+        "end_time": "10:30",
+        "ok": true,
+        "patient_id": 1,
+        "slot_date": "2026-09-30",
+        "start_time": "10:00",
+        "status": "booked"
+      },
+      "events": [
+        {
+          "kind": "step",
+          "step": "book",
+          "title": "Confirm and book"
+        },
+        {
+          "clinic_id": 1,
+          "kind": "tool",
+          "patient_id": 1,
+          "slot_date": "2026-09-30",
+          "start_time": "10:00",
+          "title": "Book the slot"
+        },
+        {
+          "booking_id": 1,
+          "kind": "tool",
+          "status": "booked",
+          "title": "Booked"
+        }
+      ],
+      "message": "yes",
+      "reply": "You are booked, Test. Clinic A (ENT) on Wednesday 2026-09-30 from 10:00 to 10:30 America/New_York time. Your booking id is 1. This chat is now closed. Start a new chat to view your bookings or make another appointment.",
+      "step": "done"
+    },
+    {
+      "booking": {
+        "booking_id": 1,
+        "clinic_id": 1,
+        "end_time": "10:30",
+        "ok": true,
+        "patient_id": 1,
+        "slot_date": "2026-09-30",
+        "start_time": "10:00",
+        "status": "booked"
+      },
+      "events": [],
+      "message": "thanks",
+      "reply": "Your booking is complete and this chat is closed. Start a new chat to continue.",
+      "step": "done"
+    }
+  ],
+  "model_requests": [
+    {
+      "messages": [
+        {
+          "content": "Pull the patient's details out of the message. Reply with JSON only, shaped as {\"first_name\": str|null, \"last_name\": str|null, \"email\": str|null, \"phone\": str|null, \"date_of_birth\": \"YYYY-MM-DD\"|null}. first_name and last_name: the two parts of the name as they gave them. email: the address they were sent mail at. phone: their number, with any punctuation they used. date_of_birth: only if they volunteered it, otherwise null. Use null for anything the message does not mention, and never guess or invent a value. Copy the values exactly as written.",
+          "role": "system"
+        },
+        {
+          "content": "{\"message\": \"My details\", \"already_known\": {\"first_name\": null, \"last_name\": null, \"email\": null, \"phone\": null, \"date_of_birth\": null}}",
+          "role": "user"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "response_format": {
+        "type": "json_object"
+      }
+    },
+    {
+      "messages": [
+        {
+          "content": "You are the intake assistant of the NextDim Health portal. A patient describes a problem in their own words. Reply with JSON only, shaped as {\"description\": str, \"speciality\": str, \"understood_as\": str, \"detail\": str}. description: the complaint, cleaned up but kept in the patient's own words. speciality: exactly one of: cardiology, ENT, dermatology, pediatrics, orthopedics, neurology, gastroenterology, ophthalmology, urology, gynecology, psychiatry, endocrinology, pulmonology, oncology, general surgery, nephrology, rheumatology, dentistry, general practice. understood_as: one sentence that restates the problem back to the patient, so they can check that you understood it. detail: what is known about when it started, where it is and how bad it is, or an empty string if they have not said. If you are given what you already understood, keep it and add to it rather than starting again, and never invent a symptom they did not describe. Do not discuss attendance counts; appointment duration is handled separately by the application.",
+          "role": "system"
+        },
+        {
+          "content": "{\"message\": \"Ear trouble\"}",
+          "role": "user"
+        }
+      ],
+      "model": "gpt-4o-mini",
+      "response_format": {
+        "type": "json_object"
+      }
+    }
+  ],
+  "nearest_candidates": [
+    {
+      "address": "Home Street",
+      "city": "New York",
+      "complaints": "Ear trouble",
+      "date_of_birth": null,
+      "email": "test@example.test",
+      "first_name": "Test",
+      "id": 1,
+      "last_name": "Patient",
+      "latitude": 40.7549,
+      "longitude": -73.9844,
+      "phone": "+12125550100",
+      "state": "NY",
+      "zip": "10001"
+    },
+    [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "distance_km": 0.0,
+        "free_slots": [
+          "09:00-09:30",
+          "09:30-10:00",
+          "10:30-11:00",
+          "11:00-11:30",
+          "11:30-12:00",
+          "12:00-12:30",
+          "12:30-13:00",
+          "13:00-13:30",
+          "13:30-14:00",
+          "14:00-14:30",
+          "14:30-15:00",
+          "15:00-15:30",
+          "15:30-16:00",
+          "16:00-16:30",
+          "16:30-17:00"
+        ],
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "distance_km": 5.7,
+        "free_slots": [
+          "09:00-09:30",
+          "09:30-10:00",
+          "10:00-10:30",
+          "10:30-11:00",
+          "11:00-11:30",
+          "11:30-12:00",
+          "12:00-12:30",
+          "12:30-13:00",
+          "13:00-13:30",
+          "13:30-14:00",
+          "14:00-14:30",
+          "14:30-15:00",
+          "15:00-15:30",
+          "15:30-16:00",
+          "16:00-16:30",
+          "16:30-17:00"
+        ],
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "distance_km": 9.2,
+        "free_slots": [
+          "09:00-09:30",
+          "09:30-10:00",
+          "10:00-10:30",
+          "10:30-11:00",
+          "11:00-11:30",
+          "11:30-12:00",
+          "12:00-12:30",
+          "12:30-13:00",
+          "13:00-13:30",
+          "13:30-14:00",
+          "14:00-14:30",
+          "14:30-15:00",
+          "15:00-15:30",
+          "15:30-16:00",
+          "16:00-16:30",
+          "16:30-17:00"
+        ],
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "zone": "America/New_York"
+      },
+      {
+        "address": "C Street, New York, NY 10032",
+        "clinic_id": 3,
+        "distance_km": 11.0,
+        "free_slots": [
+          "09:00-09:30",
+          "09:30-10:00",
+          "10:00-10:30",
+          "10:30-11:00",
+          "11:00-11:30",
+          "11:30-12:00",
+          "12:00-12:30",
+          "12:30-13:00",
+          "13:00-13:30",
+          "13:30-14:00",
+          "14:00-14:30",
+          "14:30-15:00",
+          "15:00-15:30",
+          "15:30-16:00",
+          "16:00-16:30",
+          "16:30-17:00"
+        ],
+        "name": "Clinic C",
+        "speciality": "ENT",
+        "zone": "America/New_York"
+      }
+    ]
+  ],
+  "nearest_clinics": [
+    {
+      "address": "A Street, New York, NY 10001",
+      "clinic_id": 1,
+      "distance_km": 0.0,
+      "name": "Clinic A",
+      "speciality": "ENT",
+      "zone": "America/New_York"
+    },
+    {
+      "address": "D Street, New York, NY 10004",
+      "clinic_id": 4,
+      "distance_km": 5.7,
+      "name": "Clinic D",
+      "speciality": "cardiology",
+      "zone": "America/New_York"
+    },
+    {
+      "address": "B Street, New York, NY 11215",
+      "clinic_id": 2,
+      "distance_km": 9.2,
+      "name": "Clinic B",
+      "speciality": "ENT",
+      "zone": "America/New_York"
+    },
+    {
+      "address": "C Street, New York, NY 10032",
+      "clinic_id": 3,
+      "distance_km": 11.0,
+      "name": "Clinic C",
+      "speciality": "ENT",
+      "zone": "America/New_York"
+    }
+  ],
+  "rankings": {
+    "ENT:afternoon:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "C Street, New York, NY 10032",
+        "clinic_id": 3,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 11.0,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic C",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "ENT:afternoon:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "C Street, New York, NY 10032",
+        "clinic_id": 3,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 11.0,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic C",
+        "speciality": "ENT",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "ENT:any:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 15,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 16,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "C Street, New York, NY 10032",
+        "clinic_id": 3,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 11.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 16,
+        "name": "Clinic C",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "ENT:any:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 15,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 16,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "C Street, New York, NY 10032",
+        "clinic_id": 3,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 11.0,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 16,
+        "name": "Clinic C",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "ENT:evening:11:30": [],
+    "ENT:evening:None": [],
+    "ENT:morning:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 5,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 6,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "C Street, New York, NY 10032",
+        "clinic_id": 3,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 11.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 6,
+        "name": "Clinic C",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "ENT:morning:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 30,
+        "end_time": "10:00",
+        "free_slots": 5,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "09:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "10:30",
+        "free_slots": 6,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "10:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "C Street, New York, NY 10032",
+        "clinic_id": 3,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 11.0,
+        "drift_minutes": 0,
+        "end_time": "10:30",
+        "free_slots": 6,
+        "name": "Clinic C",
+        "speciality": "ENT",
+        "start_time": "10:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "None:afternoon:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "None:afternoon:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "None:any:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 15,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 16,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 16,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "None:any:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 15,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 16,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 16,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "None:evening:11:30": [],
+    "None:evening:None": [],
+    "None:morning:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 5,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 6,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 6,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "None:morning:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 30,
+        "end_time": "10:00",
+        "free_slots": 5,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "09:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "10:30",
+        "free_slots": 6,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "10:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "10:30",
+        "free_slots": 6,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "10:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "oncology:afternoon:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 30,
+        "end_time": "12:30",
+        "free_slots": 10,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "oncology:afternoon:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "14:30",
+        "free_slots": 10,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "14:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "oncology:any:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 15,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 16,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 16,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "oncology:any:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 15,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 16,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:30",
+        "free_slots": 16,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "12:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "oncology:evening:11:30": [],
+    "oncology:evening:None": [],
+    "oncology:morning:11:30": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 5,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 6,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "12:00",
+        "free_slots": 6,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "11:30",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ],
+    "oncology:morning:None": [
+      {
+        "address": "A Street, New York, NY 10001",
+        "clinic_id": 1,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 0.0,
+        "drift_minutes": 30,
+        "end_time": "10:00",
+        "free_slots": 5,
+        "name": "Clinic A",
+        "speciality": "ENT",
+        "start_time": "09:30",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "D Street, New York, NY 10004",
+        "clinic_id": 4,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 5.7,
+        "drift_minutes": 0,
+        "end_time": "10:30",
+        "free_slots": 6,
+        "name": "Clinic D",
+        "speciality": "cardiology",
+        "start_time": "10:00",
+        "widened": false,
+        "zone": "America/New_York"
+      },
+      {
+        "address": "B Street, New York, NY 11215",
+        "clinic_id": 2,
+        "date": "2026-09-30",
+        "day_gap": 0,
+        "distance_km": 9.2,
+        "drift_minutes": 0,
+        "end_time": "10:30",
+        "free_slots": 6,
+        "name": "Clinic B",
+        "speciality": "ENT",
+        "start_time": "10:00",
+        "widened": false,
+        "zone": "America/New_York"
+      }
+    ]
+  },
+  "schemas": {
+    "Availability": {
+      "additionalProperties": false,
+      "description": "When the patient would like to be seen.\n\n`date` is the one open day the model matched what the patient said against,\nso it is left empty rather than guessed at when they asked for a day that is\nnot on the list. `outside` says that outright, which is what lets the agent\ntell the patient the booking window ends rather than quietly moving them\ninto a day they did not ask for. `weekday` is the day of the week they named\nin their own words, kept so it can be read back to them next to the date it\nresolved to.",
+      "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "At"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Date"
+        },
+        "outside": {
+          "default": false,
+          "title": "Outside",
+          "type": "boolean"
+        },
+        "period": {
+          "default": "any",
+          "enum": [
+            "morning",
+            "afternoon",
+            "evening",
+            "any"
+          ],
+          "title": "Period",
+          "type": "string"
+        },
+        "weekday": {
+          "default": "",
+          "title": "Weekday",
+          "type": "string"
+        }
+      },
+      "title": "Availability",
+      "type": "object"
+    },
+    "Booking": {
+      "additionalProperties": false,
+      "properties": {
+        "booking_id": {
+          "exclusiveMinimum": 0,
+          "title": "Booking Id",
+          "type": "integer"
+        },
+        "clinic_id": {
+          "exclusiveMinimum": 0,
+          "title": "Clinic Id",
+          "type": "integer"
+        },
+        "end_time": {
+          "format": "time",
+          "title": "End Time",
+          "type": "string"
+        },
+        "patient_id": {
+          "exclusiveMinimum": 0,
+          "title": "Patient Id",
+          "type": "integer"
+        },
+        "slot_date": {
+          "format": "date",
+          "title": "Slot Date",
+          "type": "string"
+        },
+        "start_time": {
+          "format": "time",
+          "title": "Start Time",
+          "type": "string"
+        },
+        "status": {
+          "default": "booked",
+          "enum": [
+            "booked",
+            "confirmed",
+            "cancelled",
+            "completed"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "booking_id",
+        "clinic_id",
+        "patient_id",
+        "slot_date",
+        "start_time",
+        "end_time"
+      ],
+      "title": "Booking",
+      "type": "object"
+    },
+    "Clinic": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "minLength": 1,
+          "title": "Address",
+          "type": "string"
+        },
+        "city": {
+          "minLength": 1,
+          "title": "City",
+          "type": "string"
+        },
+        "clinic_id": {
+          "exclusiveMinimum": 0,
+          "title": "Clinic Id",
+          "type": "integer"
+        },
+        "latitude": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Latitude",
+          "type": "number"
+        },
+        "longitude": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Longitude",
+          "type": "number"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "speciality": {
+          "enum": [
+            "cardiology",
+            "ENT",
+            "dermatology",
+            "pediatrics",
+            "orthopedics",
+            "neurology",
+            "gastroenterology",
+            "ophthalmology",
+            "urology",
+            "gynecology",
+            "psychiatry",
+            "endocrinology",
+            "pulmonology",
+            "oncology",
+            "general surgery",
+            "nephrology",
+            "rheumatology",
+            "dentistry",
+            "general practice"
+          ],
+          "title": "Speciality",
+          "type": "string"
+        },
+        "state": {
+          "maxLength": 2,
+          "minLength": 2,
+          "title": "State",
+          "type": "string"
+        },
+        "zip": {
+          "maxLength": 5,
+          "minLength": 5,
+          "title": "Zip",
+          "type": "string"
+        }
+      },
+      "required": [
+        "clinic_id",
+        "name",
+        "speciality",
+        "address",
+        "city",
+        "state",
+        "zip",
+        "latitude",
+        "longitude"
+      ],
+      "title": "Clinic",
+      "type": "object"
+    },
+    "Complaint": {
+      "additionalProperties": false,
+      "description": "What the patient described, and what the agent understood by it.",
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "detail": {
+          "default": "",
+          "title": "Detail",
+          "type": "string"
+        },
+        "speciality": {
+          "enum": [
+            "cardiology",
+            "ENT",
+            "dermatology",
+            "pediatrics",
+            "orthopedics",
+            "neurology",
+            "gastroenterology",
+            "ophthalmology",
+            "urology",
+            "gynecology",
+            "psychiatry",
+            "endocrinology",
+            "pulmonology",
+            "oncology",
+            "general surgery",
+            "nephrology",
+            "rheumatology",
+            "dentistry",
+            "general practice"
+          ],
+          "title": "Speciality",
+          "type": "string"
+        },
+        "understood_as": {
+          "minLength": 1,
+          "title": "Understood As",
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "speciality",
+        "understood_as"
+      ],
+      "title": "Complaint",
+      "type": "object"
+    },
+    "Confirmation": {
+      "additionalProperties": false,
+      "description": "Whether a patient is agreeing with what the agent just said, or not.",
+      "properties": {
+        "agreed": {
+          "title": "Agreed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "agreed"
+      ],
+      "title": "Confirmation",
+      "type": "object"
+    },
+    "Location": {
+      "additionalProperties": false,
+      "description": "A postal address. Coordinates come from app.geo, never from the model.",
+      "properties": {
+        "address": {
+          "minLength": 1,
+          "title": "Address",
+          "type": "string"
+        },
+        "city": {
+          "minLength": 1,
+          "title": "City",
+          "type": "string"
+        },
+        "state": {
+          "maxLength": 2,
+          "minLength": 2,
+          "title": "State",
+          "type": "string"
+        },
+        "zip": {
+          "pattern": "^\\d{5}$",
+          "title": "Zip",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "city",
+        "state",
+        "zip"
+      ],
+      "title": "Location",
+      "type": "object"
+    },
+    "Patient": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "minLength": 1,
+          "title": "Address",
+          "type": "string"
+        },
+        "city": {
+          "minLength": 1,
+          "title": "City",
+          "type": "string"
+        },
+        "complaints": {
+          "minLength": 1,
+          "title": "Complaints",
+          "type": "string"
+        },
+        "date_of_birth": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date Of Birth"
+        },
+        "email": {
+          "title": "Email",
+          "type": "string"
+        },
+        "first_name": {
+          "minLength": 1,
+          "title": "First Name",
+          "type": "string"
+        },
+        "last_name": {
+          "minLength": 1,
+          "title": "Last Name",
+          "type": "string"
+        },
+        "latitude": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Latitude",
+          "type": "number"
+        },
+        "longitude": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Longitude",
+          "type": "number"
+        },
+        "patient_id": {
+          "exclusiveMinimum": 0,
+          "title": "Patient Id",
+          "type": "integer"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phone"
+        },
+        "state": {
+          "maxLength": 2,
+          "minLength": 2,
+          "title": "State",
+          "type": "string"
+        },
+        "zip": {
+          "maxLength": 5,
+          "minLength": 5,
+          "title": "Zip",
+          "type": "string"
+        }
+      },
+      "required": [
+        "patient_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "address",
+        "city",
+        "state",
+        "zip",
+        "latitude",
+        "longitude",
+        "complaints"
+      ],
+      "title": "Patient",
+      "type": "object"
+    },
+    "PatientIntake": {
+      "additionalProperties": false,
+      "description": "Details the portal collects before it can look a patient up.\n\nName, phone and email are what a patient is identified by, so those are the\nthree the portal asks for. A date of birth is kept when a patient offers it\nand left empty when they do not, rather than being asked for.",
+      "properties": {
+        "date_of_birth": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date Of Birth"
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
+        },
+        "first_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Name"
+        },
+        "last_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Name"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone"
+        }
+      },
+      "title": "PatientIntake",
+      "type": "object"
+    },
+    "PatientUpdate": {
+      "additionalProperties": false,
+      "description": "A correction to the record on file. Whatever is not mentioned is left alone.",
+      "properties": {
+        "address": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Address"
+        },
+        "city": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "City"
+        },
+        "date_of_birth": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date Of Birth"
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
+        },
+        "first_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Name"
+        },
+        "last_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Name"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State"
+        },
+        "zip": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zip"
+        }
+      },
+      "title": "PatientUpdate",
+      "type": "object"
+    },
+    "SlotOption": {
+      "description": "One bookable choice offered to the patient.",
+      "properties": {
+        "clinic_id": {
+          "title": "Clinic Id",
+          "type": "integer"
+        },
+        "clinic_name": {
+          "title": "Clinic Name",
+          "type": "string"
+        },
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "distance_km": {
+          "title": "Distance Km",
+          "type": "number"
+        },
+        "end_time": {
+          "format": "time",
+          "title": "End Time",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        },
+        "speciality": {
+          "title": "Speciality",
+          "type": "string"
+        },
+        "start_time": {
+          "format": "time",
+          "title": "Start Time",
+          "type": "string"
+        },
+        "zone": {
+          "default": "",
+          "title": "Zone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "clinic_id",
+        "clinic_name",
+        "speciality",
+        "distance_km",
+        "date",
+        "start_time",
+        "end_time"
+      ],
+      "title": "SlotOption",
+      "type": "object"
+    },
+    "SlotPick": {
+      "additionalProperties": false,
+      "description": "Which of the slots a patient was shown their reply means, if any.",
+      "properties": {
+        "another_time": {
+          "default": false,
+          "title": "Another Time",
+          "type": "boolean"
+        },
+        "number": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Number"
+        }
+      },
+      "title": "SlotPick",
+      "type": "object"
+    }
+  }
+}

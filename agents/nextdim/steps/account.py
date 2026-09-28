@@ -1,0 +1,210 @@
+"""Account verification, contact recovery and returning-patient actions."""
+import re
+from app.config import email_verification_required
+from domain.models import PatientUpdate
+from services.verification import VerificationUnavailable
+from tools.patients import read, recovery_candidate, replace_contacts
+from tools.history import patient_bookings, all_clinics
+from .. import replies
+from ..contacts import read_contacts
+from services.contact_input import error_reply, observed_contacts, validate_contact_values
+from ..answers import is_yes
+from ..conversation import (Context, VERIFY, RECOVERY, RECOVERY_ID, CONTACT_CONFIRM,
+                            REGISTRY, MENU, COMPLAINT)
+from ..prompts import UPDATE
+
+
+def begin_verification(context: Context, patient_id: int, purpose: str) -> str:
+    flow = context.flow
+    flow.recovery_patient_id, flow.verification_purpose = patient_id, purpose
+    flow.challenge, flow.contact_fingerprint = None, None
+    flow.step = VERIFY
+    patient = read(patient_id)
+    if not patient:
+        return "The account could not be found. Please contact the clinic."
+
+    if not email_verification_required():
+        if purpose == "recovery":
+            # Locate the record, but do not disclose it or grant access before
+            # the patient confirms both proposed contacts.
+            flow.patient, flow.verified = None, False
+            if not all(flow.contact_update.get(k) for k in ("email", "phone")):
+                flow.step = RECOVERY
+                return "Please provide both the updated email address and phone number."
+            flow.contact_fingerprint = (patient["email"], patient["phone"])
+            flow.step = CONTACT_CONFIRM
+            return confirm_contacts(flow.contact_update)
+        # Legacy session gate: this is contact-based access, NOT verified email
+        # ownership. Use this mode only in a trusted demo environment.
+        flow.patient, flow.verified, flow.returning = patient, True, True
+        flow.step = REGISTRY
+        return replies.on_file(patient)
+
+    try:
+        flow.challenge = context.verification.issue(patient, purpose)
+    except VerificationUnavailable as error:
+        return str(error) + " You may request 'resend code' or 'end chat'."
+    return ("Enter the 6-digit verification code sent to the email address already on file. "
+            "It expires in 10 minutes. Your record will not be shown or changed before verification. "
+            "You can request 'resend code' or 'end chat'.")
+
+
+def verify(context: Context, message: str) -> str:
+    flow = context.flow
+    if not email_verification_required():
+        return begin_verification(context, flow.recovery_patient_id, flow.verification_purpose)
+    if message.casefold().strip(" .!") in {"resend", "resend code", "send code"}:
+        return begin_verification(context, flow.recovery_patient_id, flow.verification_purpose)
+    challenge = flow.challenge
+    if challenge is None:
+        return "Verification has not started. Request 'resend code' or contact the clinic. You can also 'end chat'."
+    if not context.verification.verify(challenge, message.strip()):
+        return "That code is incorrect, expired, or has reached its attempt limit. Request 'resend code' or contact the clinic."
+    patient = read(challenge.patient_id)
+    if not patient or (patient["email"], patient["phone"]) != challenge.fingerprint:
+        flow.verified = False
+        return "The account changed during verification. Start a new chat and verify again."
+    flow.patient, flow.verified, flow.returning = patient, True, True
+    if challenge.purpose == "recovery":
+        flow.step = CONTACT_CONFIRM
+        return confirm_contacts(flow.contact_update)
+    flow.step = REGISTRY
+    return replies.on_file(patient)
+
+
+def collect_contacts(context: Context, message: str) -> str:
+    flow = context.flow
+    found = read_contacts(context, PatientUpdate, UPDATE, {"message": message}, "Read the updated email and phone")
+    flow.contact_update.update({key: value for key, value in found.values.items() if key in {"email", "phone"}})
+    for field in found.errors:
+        flow.contact_update.pop(field, None)
+    if flow.contact_errors:
+        return error_reply(flow.contact_errors)
+    if not all(flow.contact_update.get(k) for k in ("email", "phone")):
+        requirement = "the account is verified and you confirm" if email_verification_required() else "you confirm them in this chat"
+        return f"Please provide both the updated email address and phone number. Neither will be changed until {requirement}."
+    flow.editing = None
+    return begin_verification(context, flow.recovery_patient_id, "recovery")
+
+
+def recover_identity(context: Context, message: str) -> str:
+    found = validate_contact_values(observed_contacts(message), message)
+    if found.errors:
+        return error_reply(found.errors)
+    email = found.values.get("email")
+    patient_id = recovery_candidate(email) if email else None
+    if patient_id is None:
+        return "I could not locate an account with those details. Provide the email currently on file, or contact the clinic for recovery."
+    context.flow.recovery_patient_id = patient_id
+    context.flow.step = RECOVERY
+    return replies.contact_mismatch()
+
+
+def confirm_contacts(changes: dict) -> str:
+    prefix = "Account verified. " if email_verification_required() else ""
+    return (f"{prefix}Update the email to {changes['email']} and the phone to {changes['phone']}? "
+            "Reply yes to save both, or provide corrected contact details. Nothing has been changed yet.")
+
+
+def save_contacts(context: Context, message: str) -> str:
+    flow = context.flow
+    if flow.step != CONTACT_CONFIRM or flow.recovery_patient_id is None:
+        return "Please provide the email currently on file and both updated contact details first."
+    if not all(flow.contact_update.get(k) for k in ("email", "phone")):
+        flow.step = RECOVERY
+        return "Please provide both the updated email address and phone number."
+    if not is_yes(message):
+        found = read_contacts(context, PatientUpdate, UPDATE, {"message": message}, "Read corrected contact details")
+        flow.contact_update.update({k: v for k, v in found.values.items() if k in {"email", "phone"}})
+        for field in found.errors:
+            flow.contact_update.pop(field, None)
+        if flow.contact_errors:
+            flow.step = RECOVERY
+            return error_reply(flow.contact_errors)
+        flow.editing = None
+        return confirm_contacts(flow.contact_update)
+
+    if email_verification_required():
+        if (not flow.verified or not flow.challenge or not flow.challenge.consumed
+                or flow.challenge.patient_id != flow.recovery_patient_id
+                or flow.challenge.purpose != "recovery"):
+            return "Please verify the account before changing contact details."
+        expected = flow.challenge.fingerprint
+    else:
+        expected = flow.contact_fingerprint
+        if expected is None:
+            return "Please start a new chat and provide your contact details again."
+
+    # Keep the existing atomic update, normalization and duplicate-email checks.
+    result = replace_contacts(flow.recovery_patient_id, **flow.contact_update, expected=expected)
+    if not result["ok"]:
+        return result["error"]
+    flow.patient = result["patient"]
+    flow.verified, flow.returning = True, True
+    flow.contact_update = {}
+    flow.challenge, flow.contact_fingerprint = None, None
+    flow.step = REGISTRY
+    return "Your email address and phone number have been updated. " + replies.on_file(flow.patient)
+
+
+def menu(context: Context, message: str = "") -> str:
+    text = message.casefold().strip(" .!")
+    if text in {"continue", "continue booking", "resume", "resume booking"} and context.flow.account_return_step:
+        flow = context.flow
+        flow.step, flow.account_return_step = flow.account_return_step, None
+        return flow.account_return_reply
+    if text in {"1", "my bookings", "view bookings", "show bookings", "all bookings", "booking history", "show my bookings", "view all bookings"}:
+        return history(context)
+    if text in {"2", "new appointment", "book appointment", "book an appointment", "book a new appointment", "yes"}:
+        return new_appointment(context)
+    if text in {"3", "all clinics", "show clinics", "list clinics", "view clinics"}:
+        return directory(context)
+    return replies.account_menu(context.flow.first_name)
+
+
+def new_appointment(context: Context) -> str:
+    if not context.flow.verified:
+        return ("Please finish verifying your account first." if email_verification_required()
+                else "Please provide and confirm your contact details first.")
+    from .complaint import on_entry
+    flow = context.flow
+    flow.preference, flow.chosen, flow.options = None, None, []
+    flow.booking_history = None
+    flow.account_return_step, flow.account_return_reply = None, ""
+    flow.contact_update, flow.pending = {}, None
+    flow.contact_errors, flow.editing = {}, None
+    flow.step = COMPLAINT
+    return on_entry(context)
+
+
+def enter_menu(context: Context) -> None:
+    flow = context.flow
+    if flow.step != MENU:
+        flow.account_return_step, flow.account_return_reply = flow.step, flow.last_reply
+        flow.step = MENU
+
+
+def show_menu(context: Context) -> str:
+    enter_menu(context)
+    return replies.account_menu(context.flow.first_name)
+
+
+def history(context: Context) -> str:
+    flow = context.flow
+    if not flow.verified:
+        return ("Please finish verifying your account before viewing bookings." if email_verification_required()
+                else "Please provide and confirm your contact details before viewing bookings.")
+    enter_menu(context)
+    flow.booking_history = patient_bookings(flow.patient_id, verified=flow.verified)
+    return replies.booking_history(flow.booking_history) + "\n" + replies.account_menu(flow.first_name)
+
+
+def directory(context: Context) -> str:
+    if context.flow.verified:
+        enter_menu(context)
+        suffix = replies.account_menu(context.flow.first_name)
+    else:
+        suffix = ("Finish verifying your account to view personal bookings. You can also say 'end chat'."
+                  if email_verification_required() else
+                  "Provide and confirm your contact details to view personal bookings. You can also say 'end chat'.")
+    return replies.clinic_directory(all_clinics()) + "\n" + suffix
