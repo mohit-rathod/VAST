@@ -2,7 +2,9 @@
 
 ### Working Video Demo
 
-[▶️ Click here to watch/download the working demo video (vast.mp4)](https://github.com/mohit-rathod/VAST/raw/main/vast.mp4)
+
+https://github.com/user-attachments/assets/fe36f93e-ad2b-4021-8da1-6b2e31780758
+
 
 *FastAPI healthcare scheduling agent with typed chat and real-time voice interface.*
 
