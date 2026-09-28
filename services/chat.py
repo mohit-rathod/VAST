@@ -15,7 +15,7 @@ class ChatService:
         session_id, agent = self.sessions.new_session()
         return {"session_id": session_id, "reply": agent.start()}
 
-    def turn(self, session_id: str | None, message: str) -> dict:
+    def turn(self, session_id: str | None, message: str, *, resolve_actions: bool = False) -> dict:
         events: list[dict] = []
         agent = self.sessions.get_session(session_id) if session_id else None
         if agent is None:
@@ -26,7 +26,10 @@ class ChatService:
         with getattr(agent, "turn_lock", nullcontext()):
             agent.on_event = events.append
             try:
-                reply = agent.handle(message)
+                if resolve_actions:
+                    reply = agent.handle(message, resolve_actions=True)
+                else:
+                    reply = agent.handle(message)
             except RuntimeError as error:
                 raise AgentRuntimeFailure(str(error)) from error
             except ValueError as error:

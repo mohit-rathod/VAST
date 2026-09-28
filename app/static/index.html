@@ -135,6 +135,9 @@
     input { min-width: 0; }
     #actions { max-height: 36vh; }
   }
+  .voice-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  #voiceStatus { font-size: 12px; color: var(--muted); }
+  #voiceAudio { max-width: 100%; height: 32px; }
 </style>
 </head>
 <body>
@@ -157,18 +160,59 @@
     <button id="send" type="submit">Send</button>
   </div>
   <div class="wrap hint" id="hint">Give your details &rarr; confirm your details &rarr; view bookings or book an appointment. Try &ldquo;tomorrow morning&rdquo; or &ldquo;this week&rdquo;. You can end the chat at any time.</div>
+  <div class="wrap voice-controls">
+    <button id="voiceBtn" type="button" aria-pressed="false">Start voice</button>
+    <button id="replayBtn" type="button" disabled>Replay reply</button>
+    <span id="voiceStatus" role="status" aria-live="polite">Voice off</span>
+    <audio id="voiceAudio" autoplay playsinline controls hidden></audio>
+  </div>
+  <div class="wrap hint">
+    Voice is AI-generated. Your microphone audio is sent to OpenAI.
+    The agent reply is read aloud; appointment buttons stay visual. Speak when the status
+    says Listening. Replay reply reads the latest answer without sending a chat message.
+    Stop voice returns to text only.
+  </div>
 </form>
 
 <script src="/static/chat-actions.js"></script>
+<script src="/static/voice.js"></script>
 <script>
 // The conversation id lives in this tab only; the server keeps the agent for it.
 let sessionId = null;
 let busy = false;
 let closed = false;
+let latestReplyElement = null;
+let latestSpeechText = "";
 const log = document.getElementById("log");
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const sendBtn = document.getElementById("send");
+const voiceBtn = document.getElementById("voiceBtn");
+const replayBtn = document.getElementById("replayBtn");
+const voice = new NextDimVoice({
+  getSessionId: () => sessionId,
+  isChatBlocked: () => busy || !sessionId,
+
+  canListen: () => !closed,
+
+  getReplyText: () => latestSpeechText || currentReplyText(),
+  onTranscript: text => submitMessage(text, true),
+  onError: showBanner,
+  onChange: label => {
+    document.getElementById("voiceStatus").textContent = label;
+    voiceBtn.textContent = voice.active ? "Stop voice" : "Start voice";
+    voiceBtn.setAttribute("aria-pressed", String(voice.active));
+    document.getElementById("voiceAudio").hidden = !voice.active;
+    setBusy(busy);
+  }
+});
+voiceBtn.addEventListener("click", () => {
+  if (voice.active) voice.stop();
+  else void voice.start();
+});
+replayBtn.addEventListener("click", () => { void replayReply(); });
+
+window.addEventListener("pagehide", () => voice.stop());
 
 /** Append a message bubble. `who` is "me" or "ai". */
 function bubble(who, text) {
@@ -264,59 +308,137 @@ async function problem(response) {
   let text = `${response.status} ${response.statusText}`;
   try {
     const body = await response.json();
-    if (body.detail) text = body.detail;
+    if (typeof body.detail === "string") {
+      text = body.detail;
+    } else if (Array.isArray(body.detail)) {
+      text = body.detail.map(item => item.msg || "Invalid request").join("; ");
+    } else if (typeof body.message === "string") {
+      text = body.message;
+    }
   } catch (_) { /* not json, keep the status line */ }
   return text;
 }
 
 function setBusy(value) {
   busy = value;
-  input.disabled = value || closed;
-  sendBtn.disabled = value || closed;
-  document.getElementById("endBtn").disabled = value || closed;
-  document.getElementById("resetBtn").disabled = value;
-  document.querySelectorAll("#actions button").forEach(b => b.disabled = value || closed);
+  const blocked = busy || closed || !sessionId || voice.blocking;
+  input.disabled = blocked;
+  sendBtn.disabled = blocked;
+  document.getElementById("endBtn").disabled = blocked;
+  document.getElementById("resetBtn").disabled = busy || voice.blocking;
+  document.querySelectorAll("#actions button").forEach(b => b.disabled = blocked);
+  // Stopping voice is always possible, even during an agent request.
+  voiceBtn.disabled = !voice.active && (busy || closed || !sessionId);
+
+  // A completed conversation may still replay its final answer.
+  replayBtn.disabled = busy || voice.blocking || !sessionId || !latestReplyElement;
 }
 
 const actionRenderer = new ChatActionRenderer(
-  document.getElementById("actions"), submitMessage, () => busy || closed
+  document.getElementById("actions"), submitMessage,
+  () => busy || closed || !sessionId || voice.blocking
 );
 function renderActions(actions) { actionRenderer.render(actions); }
 window.addEventListener("pagehide", () => actionRenderer.destroy());
 
-async function submitMessage(message) {
-  if (!message || busy || closed) return;
+/** The patient-facing reply only. Button labels are visual controls, not narration. */
+function currentReplyText() {
+  return latestReplyElement?.querySelector(".bubble")?.textContent || "";
+}
+
+/**
+ * Produce natural speech without reading a slot grid or action buttons aloud.
+ * The visible reply remains authoritative and unchanged. When appointment buttons
+ * are present, the user can either press one or describe the desired clinic/time;
+ * the backend resolves both paths to the same canonical action.
+ */
+function spokenReply(turn) {
+  const reply = String(turn?.reply || "").trim();
+  const actions = Array.isArray(turn?.actions) ? turn.actions : [];
+  const slots = actions.filter(action => action.kind === "slot");
+  if (!slots.length) return reply;
+
+  // slot_choices() places the search summary before the numbered list. Keep that
+  // useful context, omit the list itself, and invite natural speech rather than
+  // narrating every visible button.
+  const firstLine = reply.split(/\r?\n/, 1)[0].trim().replace(/:\s*$/, "");
+  const context = firstLine ? `${firstLine}. ` : "";
+  return `${context}I found ${slots.length} appointment choices. ` +
+    "Tell me the clinic, day, or time you prefer, or choose an appointment on screen.";
+}
+
+/** Replay never calls /api/chat, so it cannot repeat a booking or contact update. */
+async function replayReply() {
+  if (busy || voice.blocking || !sessionId || !latestReplyElement) return;
+  if (!voice.active) {
+    await voice.start({listenAfter: false});
+    return;
+  }
+  await voice.speak(latestSpeechText || currentReplyText());
+  if (closed) voice.stop();
+  else voice.listen();
+}
+
+async function submitMessage(message, fromVoice = false) {
+  message = String(message || "").trim();
+  if (!message || busy || closed || !sessionId || (voice.blocking && !fromVoice)) return;
+  if (message.length > 2000) {
+    showBanner("Please keep your message within 2,000 characters.");
+    return;
+  }
   setBusy(true);
+  voice.pauseForAgent();
   input.value = "";
   bubble("me", message);
   const thinking = bubble("ai", "working...");
+  scroll();
   try {
+    // Do not retry automatically: this call can have booking side effects.
     const response = await fetch("/api/chat", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // UI speech/text may be paraphrases of the currently visible controls.
+        // The backend resolves them to canonical action payloads before handling.
+        "X-Resolve-Actions": "1",
+      },
       body: JSON.stringify({ session_id: sessionId, message }),
     });
     if (!response.ok) throw new Error(await problem(response));
     const turn = await response.json();
     sessionId = turn.session_id;
     thinking.remove();
-    bubble("ai", turn.reply);
-    if (turn.events.length) {
-      const { box, list } = trace(turn.events, false);
-      log.lastElementChild.after(box);
-      await playEvents(list, turn.events);
-    }
+    const replyBubble = bubble("ai", turn.reply);
+    latestReplyElement = replyBubble;
     closed = turn.done;
     renderActions(turn.actions);
+    latestSpeechText = spokenReply(turn);
     if (closed) {
-      input.placeholder = turn.booking ? "Booked. Start a new chat to view your bookings." : "Chat ended. Start a new chat to continue.";
+      input.placeholder = turn.booking
+        ? "Booked. Start a new chat to view your bookings."
+        : "Chat ended. Start a new chat to continue.";
     }
     scroll();
+    // Never narrate action-button labels. For slot grids, use a concise spoken
+    // prompt while keeping the complete detailed list visible on screen.
+    const spoken = voice.speak(latestSpeechText);
+    const events = Array.isArray(turn.events) ? turn.events : [];
+    if (events.length) {
+      const { box, list } = trace(events, false);
+      replyBubble.after(box);
+      await playEvents(list, events);
+    }
+    await spoken;
   } catch (error) {
     thinking.remove();
     showBanner(error.message || "Could not reach the server.");
   } finally {
     setBusy(false);
-    if (!closed) input.focus();
+    if (closed) voice.stop();
+    else {
+      voice.listen();
+      input.focus();
+    }
   }
 }
 
@@ -337,7 +459,8 @@ function showBanner(text) {
 }
 
 async function resetChat() {
-  if (busy) return;
+  if (busy || voice.blocking) return;
+  voice.stop();
   setBusy(true);
   try {
     const response = await fetch("/api/reset", {
@@ -351,7 +474,9 @@ async function resetChat() {
     log.replaceChildren();
     renderActions([]);
     input.placeholder = "Enter your details, a date, or a chat command";
-    bubble("ai", fresh.reply);
+    latestReplyElement = bubble("ai", fresh.reply);
+    latestSpeechText = fresh.reply;
+    scroll();
   } catch (error) {
     showBanner(error.message || "Could not start a new chat.");
   } finally {
@@ -365,8 +490,11 @@ document.getElementById("resetBtn").addEventListener("click", resetChat);
 (async function start() {
   const pill = document.getElementById("modelPill");
   let configurationWarning = "";
+  setBusy(true);
   try {
-    const config = await (await fetch("/api/config")).json();
+    const response = await fetch("/api/config");
+    if (!response.ok) throw new Error(await problem(response));
+    const config = await response.json();
     pill.textContent = config.model;
     if (!config.ready) {
       pill.textContent = "no API key";
@@ -376,6 +504,7 @@ document.getElementById("resetBtn").addEventListener("click", resetChat);
   } catch (_) {
     pill.textContent = "offline";
   }
+  setBusy(false);
   await resetChat();
   if (configurationWarning) showBanner(configurationWarning);
   input.focus();

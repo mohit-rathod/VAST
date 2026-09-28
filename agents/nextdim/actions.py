@@ -1,6 +1,6 @@
 """State-derived patient buttons. The browser does not invent business actions."""
 from .conversation import (BOOK, CLINIC, COMPLAINT, CONTACT_CONFIRM, DONE,
-                           END_CONFIRM, MENU, REGISTRY, SLOTS, VERIFY)
+                           END_CONFIRM, MENU, REGISTRY, SLOTS)
 from services.date_shortcuts import date_shortcuts
 from tools import available_slots as calendar
 
@@ -21,9 +21,7 @@ def actions(flow) -> list[dict[str, str]]:
         if not flow.contact_errors:
             result.append(action("Keep current details", "keep current details"))
     elif not flow.contact_errors or flow.step == MENU:
-        if flow.step == VERIFY:
-            result.append(action("Resend code", "resend code"))
-        elif flow.step == MENU:
+        if flow.step == MENU:
             result.extend([action("View all my bookings", "my bookings"),
                            action("Book an appointment", "book appointment"),
                            action("View all clinics", "all clinics")])

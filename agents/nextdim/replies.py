@@ -6,7 +6,6 @@ database, no clock, which also means a test can assert on a reply without settin
 up a conversation.
 """
 
-from app.config import email_verification_required
 from app.geo import DEFAULT_ZONE
 from domain.models import Complaint, Location
 
@@ -24,18 +23,10 @@ ASKED_AS = {
 
 def welcome() -> str:
     """The greeting, which is also the first question."""
-    if not email_verification_required():
-        return (
-            "Welcome to the NextDim Health portal. I am your care coordinator and I will"
-            " get you in front of the right doctor."
-            " To start, could you give me your full name, email address and phone number?"
-            " You can say 'end chat' at any time."
-        )
     return (
         "Welcome to the NextDim Health portal. I am your care coordinator and I will"
         " get you in front of the right doctor."
-        " To start, could you give me your full name, the email address we would send"
-        " your confirmation to, and a phone number we can reach you on?"
+        " To start, could you give me your full name, email address and phone number?"
         " You can say 'end chat' at any time."
     )
 
@@ -333,14 +324,9 @@ def open_days() -> str:
 
 
 def contact_mismatch() -> str:
-    if not email_verification_required():
-        return ("There may be an existing registration, but the email and phone do not match it together. "
-                "Please provide both your updated email address and phone number. "
-                "I will show both details for your confirmation before saving them. No email will be sent.")
     return ("There may be an existing registration, but the email and phone do not match it together. "
             "Please provide both your updated email address and phone number. "
-            "Before saving them, I will verify the account using the email already on file. "
-            "If you cannot access that email, please contact the clinic for recovery.")
+            "I will show both details for your confirmation before saving them. No email will be sent.")
 
 
 def account_menu(name: str) -> str:

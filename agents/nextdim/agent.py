@@ -51,19 +51,29 @@ class NextDimAgent:
         self.flow.last_reply = replies.welcome()
         return self.flow.last_reply
 
-    def handle(self, message: str) -> str:
+    def handle(self, message: str, *, resolve_actions: bool = False) -> str:
         # Serialize same-session confirmations as well as database reservations.
         with self._lock:
-            reply = self._handle(message.strip())
+            reply = self._handle(message.strip(), resolve_actions=resolve_actions)
             self.flow.last_reply = reply
             return reply
 
-    def _handle(self, message: str) -> str:
+    def _handle(self, message: str, *, resolve_actions: bool = False) -> str:
         if self.flow.finished:
             return replies.after_booking() if self.booking else replies.ended()
         # Do not emit raw intake, contact details or verification codes to the UI trace.
         self.context.emit(STEP, STEP_LABELS.get(self.step, self.step), step=self.step)
         try:
+            # Browser turns may ask the LLM to resolve natural language against
+            # the actions currently visible in that same state. Exact button
+            # payloads remain deterministic; non-browser/internal callers retain
+            # the previous behaviour unless they opt in.
+            if resolve_actions:
+                from .action_intent import resolve as resolve_visible_action
+                canonical_action = resolve_visible_action(self.context, message)
+                if canonical_action is not None:
+                    message = canonical_action
+
             controlled = controls.handle(self.context, message)
             if controlled is not None:
                 return controlled

@@ -1,6 +1,5 @@
 """Conversation-wide account actions and a single explicit end confirmation."""
 import re
-from app.config import email_verification_required
 from . import replies
 from .answers import is_yes
 from .actions import actions
@@ -45,9 +44,7 @@ def handle(context, message: str) -> str | None:
         flow.contact_errors, flow.editing = {}, None
         flow.contact_fingerprint = None
         flow.challenge = None
-        if not email_verification_required():
-            return "Please provide the email currently on file. I will ask for both updated contact details and your confirmation before saving. No email will be sent."
-        return "Please provide the email currently on file. I will ask for both updated contact details and verify the existing email before any update."
+        return "Please provide the email currently on file. I will ask for both updated contact details and your confirmation before saving. No email will be sent."
     if text in {"register new patient", "new patient", "i am new", "i am a new patient"} and not flow.verified:
         if flow.intake.missing():
             flow.step = DETAILS
@@ -88,7 +85,7 @@ def handle(context, message: str) -> str | None:
         return account.history(context)
     if text in {"all clinics", "show clinics", "list clinics", "view clinics"}:
         return account.directory(context)
-    if text in {"new appointment", "book appointment", "book an appointment", "book a new appointment"} and flow.verified:
+    if text in {"new appointment", "book appointment", "book an appointment", "book a new appointment"}:
         return account.new_appointment(context)
     if text in {"help", "options", "menu"}:
         if flow.verified:

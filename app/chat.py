@@ -6,7 +6,7 @@ show what the agent did before showing what it said.
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from app.config import MODEL, OPENAI_API_KEY, VERSION
@@ -41,7 +41,7 @@ def reset(payload: dict) -> ResetOut:
 
 
 @router.post("/api/chat", response_model=TurnOut)
-def chat(payload: ChatIn) -> TurnOut:
+def chat(payload: ChatIn, request: Request) -> TurnOut:
     """Send one message and return the reply with the steps that led to it."""
     if not OPENAI_API_KEY and not is_end_request(payload.message) and payload.message.strip().lower() not in {"yes", "no"}:
         raise HTTPException(
@@ -51,7 +51,8 @@ def chat(payload: ChatIn) -> TurnOut:
         )
 
     try:
-        result = service.turn(payload.session_id, payload.message)
+        resolve_actions = request.headers.get("x-resolve-actions") == "1"
+        result = service.turn(payload.session_id, payload.message, resolve_actions=resolve_actions)
     except AgentRuntimeFailure as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
     except AgentValueFailure as error:

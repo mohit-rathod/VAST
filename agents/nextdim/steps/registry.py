@@ -36,7 +36,7 @@ def open_registry(context: Context) -> str:
     flow = context.flow
     from tools.patients import identify_patient
     from ..conversation import RECOVERY, RECOVERY_ID
-    from .account import begin_verification
+    from .account import begin_confirmation
     match = identify_patient(flow.intake.email, flow.intake.phone)
     if match.status == "missing":
         return replies.need_address(flow.intake.first_name or "there")
@@ -47,7 +47,7 @@ def open_registry(context: Context) -> str:
         flow.recovery_patient_id = match.patient_id
         flow.step = RECOVERY
         return replies.contact_mismatch()
-    return begin_verification(context, match.patient_id, "login")
+    return begin_confirmation(context, match.patient_id, "login")
 
 
 def handle(context: Context, message: str) -> str:
@@ -128,7 +128,7 @@ def _save(context: Context) -> str:
         return f"I could not save that: {result['error']}. Could you say it another way?"
 
     flow.patient = result["patient"]
-    flow.verified = True
+    flow.verified = False  # Ask for confirmation of the full record next.
     context.emit(
         TOOL,
         "Created the patient record" if created else "Saved the address on file",
@@ -182,6 +182,17 @@ def _place_of(flow, change: PatientUpdate) -> Location | None:
 
 
 def _continue(context: Context) -> str:
+    flow = context.flow
+    if flow.patient is None:
+        return replies.need_address(flow.intake.first_name or "there")
+    # Do not confirm a stale record if another session changed the contacts.
+    from tools.patients import read
+    current = read(flow.patient_id)
+    if not current or (current["email"], current["phone"]) != (flow.patient["email"], flow.patient["phone"]):
+        flow.verified = False
+        return "The account changed while you were confirming it. Start a new chat and provide your current details."
+    flow.patient = current
+    flow.verified = True  # Explicit in-chat confirmation, not email ownership.
     if context.flow.returning:
         from ..conversation import MENU
         context.flow.step = MENU

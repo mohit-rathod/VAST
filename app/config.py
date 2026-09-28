@@ -12,11 +12,19 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 MODEL = os.getenv("VAST_MODEL", "gpt-4o-mini")
 
 # The release this working tree is. Bump it when the behaviour changes.
-VERSION = "0.2.1"
+VERSION = "0.2.3"
 
 
 def email_verification_required() -> bool:
-    """Retain email verification unless chat-only mode is explicitly enabled."""
-    return os.getenv("VAST_REQUIRE_EMAIL_VERIFICATION", "true").strip().lower() not in {
-        "false", "0", "no", "off",
-    }
+    """Compatibility hook: email-code verification is removed.
+
+    The old VAST_REQUIRE_EMAIL_VERIFICATION variable is intentionally ignored,
+    including when an existing .env still sets it to true. This application
+    uses explicit in-chat confirmation, not proof of email ownership.
+    """
+    return False
+
+
+# Keep VAST_MODEL unchanged: it remains the model used by the NextDim agent.
+REALTIME_MODEL = os.getenv("VAST_REALTIME_MODEL", "gpt-realtime")
+REALTIME_VOICE = os.getenv("VAST_REALTIME_VOICE", "marin")

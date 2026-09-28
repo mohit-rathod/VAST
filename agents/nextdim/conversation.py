@@ -41,7 +41,7 @@ STEP_LABELS = {
     SLOTS: "Offer clinics and slots",
     BOOK: "Confirm and book",
     DONE: "Finished",
-    VERIFY: "Verify ownership of the registered email",
+    VERIFY: "Confirm contact details in chat",  # Legacy state, never entered by new turns.
     RECOVERY: "Collect both updated contact details",
     RECOVERY_ID: "Locate the account for recovery",
     CONTACT_CONFIRM: "Confirm the contact update",
@@ -74,6 +74,7 @@ class Flow:
         self.booking: dict | None = None
         self.duration_minutes = 30
         self.returning = False
+        # Legacy field name: means confirmed in this chat, NOT authenticated identity.
         self.verified = False
         self.recovery_patient_id: int | None = None
         self.contact_update: dict = {}
@@ -126,9 +127,8 @@ class Context:
         self.flow = flow
         self.client = client
         self.on_event = on_event
-        if verification is None:
-            from app.email_delivery import verification_service
-            verification = verification_service()
+        # Retained constructor argument for callers/tests. No email sender is
+        # constructed, and conversation handlers never issue or verify codes.
         self.verification = verification
 
     def emit(self, kind: str, title: str, **data) -> None:
