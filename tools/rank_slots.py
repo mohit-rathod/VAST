@@ -51,7 +51,26 @@ def rank_slots(
         emit(on_event, NOTE, f"No clinic treats {speciality}, looking at all of them")
         clinics = nearest_clinics(patient_id, count=None)
 
-    rows = [row for clinic in clinics for row in _slots_of(clinic, wanted, period, at=at, dates=dates, duration_minutes=duration_minutes)]
+    # When an explicit date list is supplied (for example a requested range or
+    # the bounded nearby-day fallback), keep each row's distance from the
+    # originally requested day. This makes the nearest day win before distance
+    # and time-of-day tie breakers.
+    measure_from = wanted if dates is not None else None
+
+    rows = [
+        row
+        for clinic in clinics
+        for row in _slots_of(
+            clinic,
+            wanted,
+            period,
+            measure_from,
+            at=at,
+            dates=dates,
+            duration_minutes=duration_minutes,
+        )
+    ]
+
     widened = False
     if not rows and wanted is not None and widen and dates is None:
         # Nothing free on the day they asked for, in the period they asked for.

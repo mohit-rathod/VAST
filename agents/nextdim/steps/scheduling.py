@@ -14,6 +14,7 @@ from ..conversation import BOOK, CLINIC, Context, SLOTS
 from ..prompts import SLOT
 
 RESOLVER = DateResolver()
+NEARBY_DAY_LIMIT = 2
 
 
 def on_entry(context: Context) -> str:
@@ -35,19 +36,87 @@ def offer(context: Context) -> str:
     if flow.preference is None:
         flow.step = CLINIC
         return replies.ask_time(_zone(flow))
+
     want = flow.preference
-    dates = [want.date + timedelta(days=i) for i in range(((want.end_date or want.date) - want.date).days + 1)]
-    rows = rank_slots(flow.patient_id, day=want.date, speciality=flow.speciality,
-                      period=want.period, at=want.at, dates=dates, widen=False,
-                      duration_minutes=flow.duration_minutes, on_event=context.on_event)
-    flow.options, flow.chosen = [SlotOption.from_row(row) for row in rows], None
+    zone = _zone(flow)
+
+    # First search exactly the date/date-range the patient requested.
+    dates = [
+        want.date + timedelta(days=i)
+        for i in range(
+            ((want.end_date or want.date) - want.date).days + 1
+        )
+    ]
+
+    rows = rank_slots(
+        flow.patient_id,
+        day=want.date,
+        speciality=flow.speciality,
+        period=want.period,
+        at=want.at,
+        dates=dates,
+        widen=False,
+        duration_minutes=flow.duration_minutes,
+        on_event=context.on_event,
+    )
+
+    widened = False
+
+    # Requested date/range had no matching slots.
+    # Search only within +/- 2 days and never offer today/past dates.
+    if not rows:
+        nearby = _nearby_dates(want, zone)
+
+        if nearby:
+            context.emit(
+                NOTE,
+                "No appointments matched the requested date; checking nearby dates",
+                requested_start=str(want.date),
+                requested_end=str(want.end_date or want.date),
+                nearby_dates=[str(day) for day in nearby],
+                max_day_offset=NEARBY_DAY_LIMIT,
+            )
+
+            rows = rank_slots(
+                flow.patient_id,
+                day=want.date,
+                speciality=flow.speciality,
+                period=want.period,
+                at=want.at,
+                dates=nearby,
+                widen=False,
+                duration_minutes=flow.duration_minutes,
+                on_event=context.on_event,
+            )
+
+            widened = bool(rows)
+
+            for row in rows:
+                row["widened"] = widened
+
+    flow.options = [SlotOption.from_row(row) for row in rows]
+    flow.chosen = None
+
     if not rows:
         flow.step = CLINIC
-        return (f"No available {flow.duration_minutes}-minute appointments match {_range(want)} "
-                f"{('in the ' + want.period) if want.period != 'any' else ''} {replies.clock(_zone(flow))}. "
-                "I have not changed your requested dates or made a booking. Please choose another date or time, or say 'end chat'.")
+
+        return (
+            f"No available {flow.duration_minutes}-minute appointments match "
+            f"{_range(want)} "
+            f"{('in the ' + want.period) if want.period != 'any' else ''} "
+            f"{replies.clock(zone)}. "
+            f"I also checked up to {NEARBY_DAY_LIMIT} days before and after "
+            "your request, using only dates after today. "
+            "I have not made a booking. "
+            "Please choose another date or time, or say 'end chat'."
+        )
+
     flow.step = SLOTS
-    return replies.slot_choices(flow.options, _header(flow, rows[0]["widened"]))
+
+    return replies.slot_choices(
+        flow.options,
+        _header(flow, widened or rows[0]["widened"]),
+    )
 
 
 def choose(context: Context, message: str) -> str:
@@ -133,9 +202,76 @@ def _range(want: Availability) -> str:
 
 def _header(flow, widened: bool = False) -> str:
     want = flow.preference
-    text = f"For {_range(want)}, "
+
+    if widened:
+        text = (
+            f"No available appointment matched {_range(want)}. "
+            f"Here are the nearest available choices within "
+            f"{NEARBY_DAY_LIMIT} days of your request, "
+        )
+    else:
+        text = f"For {_range(want)}, "
+
     text += f"requested start {want.at}, " if want.at else ""
     text += f"{flow.duration_minutes}-minute appointments"
+
     if want.at:
         text += " (closest available start times are listed explicitly below)"
+
     return text + ":"
+
+
+def _nearby_dates(want: Availability, zone: ZoneInfo) -> list:
+    """Nearby fallback dates, preferring later dates and staying after today.
+
+    The requested date/range is searched first. Only when that search has no
+    matching slot do we consider dates up to two days outside the request.
+
+    Search order for each distance:
+        +1 day
+        -1 day
+        +2 days
+        -2 days
+
+    Every fallback date must:
+        - be inside the configured booking window
+        - not be inside the originally requested range
+        - be strictly after today's real date
+    """
+
+    start = want.date
+    end = want.end_date or want.date
+
+    today = calendar.now(zone).date()
+    allowed = set(window(zone))
+
+    requested = {
+        start + timedelta(days=i)
+        for i in range((end - start).days + 1)
+    }
+
+    result = []
+
+    for offset in range(1, NEARBY_DAY_LIMIT + 1):
+        candidates = (
+            end + timedelta(days=offset),
+            start - timedelta(days=offset),
+        )
+
+        for candidate in candidates:
+            if candidate <= today:
+                continue
+
+            if candidate not in allowed:
+                continue
+
+            if candidate in requested:
+                continue
+
+            if candidate in result:
+                continue
+
+            result.append(candidate)
+
+    return result
+    

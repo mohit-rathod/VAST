@@ -57,9 +57,11 @@ def create_voice_session(payload: VoiceSessionIn, request: Request) -> Response:
         "model": config.REALTIME_MODEL,
         "output_modalities": ["audio"],
         "instructions": (
-            "You are a speech interface, not the application agent. "
-            "Only transcribe audio or read supplied text as instructed per response. "
-            "Never answer independently, make decisions, or invent application results."
+            "You are the voice I/O layer for an application whose backend owns the "
+            "conversation, reasoning, and business actions. Follow the task given on "
+            "each response: transcription tasks return a faithful transcript; speech "
+            "tasks read the backend's finalized reply. Do not add a separate assistant "
+            "answer or commentary."
         ),
         "tools": [],
         "tool_choice": "none",

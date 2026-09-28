@@ -346,25 +346,11 @@ function currentReplyText() {
   return latestReplyElement?.querySelector(".bubble")?.textContent || "";
 }
 
-/**
- * Produce natural speech without reading a slot grid or action buttons aloud.
- * The visible reply remains authoritative and unchanged. When appointment buttons
- * are present, the user can either press one or describe the desired clinic/time;
- * the backend resolves both paths to the same canonical action.
- */
+/** Return exactly the text shown in the assistant reply bubble for TTS. */
 function spokenReply(turn) {
-  const reply = String(turn?.reply || "").trim();
-  const actions = Array.isArray(turn?.actions) ? turn.actions : [];
-  const slots = actions.filter(action => action.kind === "slot");
-  if (!slots.length) return reply;
-
-  // slot_choices() places the search summary before the numbered list. Keep that
-  // useful context, omit the list itself, and invite natural speech rather than
-  // narrating every visible button.
-  const firstLine = reply.split(/\r?\n/, 1)[0].trim().replace(/:\s*$/, "");
-  const context = firstLine ? `${firstLine}. ` : "";
-  return `${context}I found ${slots.length} appointment choices. ` +
-    "Tell me the clinic, day, or time you prefer, or choose an appointment on screen.";
+  // Voice must mirror the visible agent reply. Do not replace slot lists with a
+  // summary: if the user can read it in the reply bubble, they can hear it too.
+  return String(turn?.reply || "").trim();
 }
 
 /** Replay never calls /api/chat, so it cannot repeat a booking or contact update. */
