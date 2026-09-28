@@ -1,227 +1,292 @@
-# VAST
+# VAST / NextDim - version 0.2.1
 
-**Version 0.1.0**
+> **Optional chat-only contact hotfix:** To collect/update email and phone without
+> sending verification emails, set `VAST_REQUIRE_EMAIL_VERIFICATION=false` in
+> your existing `.env` and restart the backend. The default remains email
+> verification when the flag is absent. This is a trusted-demo mode, not proof
+> of account ownership. See `documents/CHAT_ONLY_CONTACT_HOTFIX.md`.
 
-Voice Automated Scheduling Technology
+A Python/FastAPI clinic appointment chatbot with SQLite persistence, deterministic
+appointment selection and a server-driven browser interface. This release builds
+on the previous no-email release. It adds explicit contact-format feedback,
+LLM-assisted booking confirmation, and context-aware confirmation/date buttons.
+The earlier account, duration, lifecycle and history features remain available.
 
-Python backend: FastAPI + SQLite, with tools for slots, booking and clinic matching.
-
-VAST is a clinic appointment portal. A patient describes a problem in their own
-words, the agent works out the speciality, registers or looks them up, finds a
-clinic near them with a free slot and books it. The model does the language
-work; the calendar, the arithmetic and the database work are plain code.
-
-| | |
-| --- | --- |
-| Stack | Python 3.11, FastAPI, SQLite, Pydantic, OpenAI |
-| Entry points | `make run` for the chat UI, `make agent` for the terminal |
-| Database | `data/vast.db`, built from the CSVs in `data/` by `make ingest` |
-| Tests | none yet, the tools are small enough to call from a Python shell |
+This is a behavior-changing release, not another parity-only refactor. The
+original runtime dependency pins and supplied database/CSV files are unchanged.
+Read `documents/UPDATE_V0_2_1.md` for this update. `documents/UPDATE_V0_2.md`
+describes the earlier migration; this update introduces no new database migration.
 
 ## Setup
 
-```bash
-make venv
-make install
-cp .env.example .env      # then put your OpenAI key in .env
-```
-
-`.env` holds `OPENAI_API_KEY` and, if you want a different one, `VAST_MODEL`.
-It is gitignored; `app/config.py` reads it and every module imports the settings
-from there, so the key never has to be exported by hand.
-
-## Run
+Use the existing working Python environment from the previous release. For a new
+environment, install `requirements.txt` and, for tests, `requirements-dev.txt`.
+The supplied pins have not been independently revalidated against a package index.
 
 ```bash
-make run     # chat UI on http://127.0.0.1:8000, API docs at /docs
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
 ```
 
-## Chat UI
+On Windows, activate with `.venv\Scripts\Activate.ps1` and copy the example with
+`Copy-Item .env.example .env`. When upgrading, keep the existing `.env` and add the
+new settings rather than replacing existing credentials.
 
-`make run` serves a one page chat at http://127.0.0.1:8000. Type a complaint,
-answer the questions, pick a clinic. It is the same `NextDimAgent` the
-terminal uses, so anything you can do in one you can do in the other.
+Configure `OPENAI_API_KEY`. Keep `VAST_REQUIRE_EMAIL_VERIFICATION=false` to
+collect and update contacts entirely in chat without sending email. The SMTP
+settings below are needed only when restoring verification with `true`. If the
+flag is absent, verification remains enabled. Contact-only mode does not prove
+account ownership and must not be exposed publicly with real patient data.
 
-Each turn shows a **trace** above the reply, so you can see the work rather than
-just the answer. Expand a turn to get every event, in order:
+```dotenv
+VAST_REQUIRE_EMAIL_VERIFICATION=false
+VAST_PHONE_REGION=US
+VAST_BOOKING_DAYS=14
+VAST_FIRST_DAY=
+VAST_SMTP_HOST=your-starttls-smtp-host
+VAST_SMTP_PORT=587
+VAST_SMTP_FROM=your-verified-sender-address
+VAST_SMTP_USERNAME=your-smtp-username
+VAST_SMTP_PASSWORD=your-smtp-password
+```
 
-| badge | what it means |
-| --- | --- |
-| `step` | which part of the conversation machine is running |
-| `model` | an OpenAI call: the input it was given, the raw reply, the parsed result |
-| `tool` | plain code: the patient lookup, ZIP to coordinates, free slots, the booking |
-| `note` | something worth knowing, like a reply that failed validation and was retried |
+When verification is enabled, the SMTP adapter does not support implicit-TLS port 465. Configure a STARTTLS
+endpoint. New proposed contacts are confirmed by the user; email ownership is verified
+using the **previous email**, not the proposed replacement email or phone.
 
-A retry shows up as its own `note`, followed by the second `model` call, so you
-can see the bad JSON *and* the correction. Expand any event to see the exact
-values.
-
-The page is plain HTML, CSS and JavaScript in `app/static/index.html` with no
-build step. It talks to three endpoints:
-
-| endpoint | what it does |
-| --- | --- |
-| `POST /api/chat` | one message in, the reply plus the turn's events out |
-| `POST /api/reset` | throw the conversation away and start a new one |
-| `GET /api/config` | the model in use, and whether a key is set |
-
-Each browser tab gets its own agent, held in memory by `app/sessions.py` and
-lost on restart. The patients and bookings it writes go to SQLite as usual.
-Without a key the page says so up front and `POST /api/chat` answers `503` with
-the same message, rather than failing halfway through a booking.
-
-## Data
-
-`data/` holds the source CSVs and the SQLite file (`data/vast.db`, gitignored,
-created automatically by `make ingest`).
-
-| file | rows | columns |
-| --- | --- | --- |
-| `clinics.csv` | 20 | `clinic_id, name, speciality, address, city, state, zip, latitude, longitude` |
-| `patients.csv` | 100 | `patient_id, first_name, last_name, email, phone, date_of_birth, address, city, state, zip, latitude, longitude, complaints` |
-| `bookings.csv` | 1120 | `booking_id, clinic_id, patient_id, slot_date, start_time, end_time, status` |
-
-All clinics are in the New York area, each with a speciality (cardiology, ENT,
-dermatology, ...). Patients carry an address, coordinates and complaints, so they
-can be matched to a clinic by speciality, complaint and distance.
-
-Slot window: 30/09/2026 to 04/10/2026, 09:00-17:00, 30-minute slots.
-20 clinics x 5 days x 16 slots = 1600 open slots, 1120 booked (70%).
-
-## Ingest
+Before first startup on an existing database, take a SQLite backup and audit the
+phone data as explained below. Then start the application:
 
 ```bash
-make ingest      # python -m app.ingest
-make reingest    # drop the database, then ingest
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Every row is validated by its model in `domain/models.py` before it is inserted
-(`app/ingest.py`), and inserts use `INSERT OR REPLACE`, so re-running is safe.
-`UNIQUE (clinic_id, slot_date, start_time)` stops two bookings in one slot.
+The UI is at `http://127.0.0.1:8000`. Existing routes remain: `GET /`, `GET /health`,
+`GET /api/config`, `POST /api/reset`, and `POST /api/chat`.
 
-## The NextDim agent
+## Back up and migrate existing data
 
-```bash
-make agent    # python -m agents.nextdim.agent
-```
-
-One step machine in `agents/nextdim/agent.py`. The model only does language work;
-everything else is code:
-
-| step | who | what happens |
-| --- | --- | --- |
-| 1 welcome | code | greeting |
-| 2 complaint | LLM | restates the problem, names the speciality, asks the patient to confirm; "no" sends them back to explain again |
-| 3 details | LLM + code | pulls name, date of birth, email, phone out of free text, re-asks for what is missing, then looks the patient up by **email + phone together**; an existing record is reused (name and date of birth are never overwritten), a new address registers them |
-| 4 match | tools | asks for the date and morning/afternoon, then `suggest_clinics` + `available_slots` offer up to 3 clinic + slot choices. If that period is full, see below |
-| 5 book | code | reads the choice back, and on "yes" calls `book_appointment`, then confirms with the booking id |
-
-### When the time the patient asked for is full
-
-If nothing is free in the period the patient asked for, the agent says so and
-offers the closest other times instead of sending them back to re-ask:
-
-```
-Everything in the morning on 2026-09-30 is already booked. The closest I can get is:
-1. Park Slope Pediatrics - pediatrics, 7.3 km away, 2026-09-30 13:00 to 13:30
-2. Brooklyn Orthopedic Institute - orthopedics, 8.0 km away, 2026-09-30 12:00 to 12:30
-3. Brooklyn ENT & Hearing Center - ENT, 8.4 km away, 2026-09-30 15:30 to 16:00
-Which one would you like? Reply with the number.
-```
-
-They are the usual numbered choices, so picking one and confirming books it
-normally. `alternatives` in `agents/nextdim/agent.py` sets the order, closest
-first: another time on the same day before another day, because moving an
-appointment within a day is easier than moving it to a different one, and among
-the other days the nearest first, a later day winning a tie. So a request for
-the middle of the window is never answered with the far end of it.
-
-The search reuses `nearest_clinics`, which ranks by distance and needs no model
-call, and looks up the whole window once per clinic. Widening the search
-therefore costs one pass over the database, not a second OpenAI call, and only
-the 3 that are shown are kept, so the number the patient replies with always
-matches the list they were given. If the entire window is booked, the agent says
-so and asks them to try again later.
-
-Note that clinics open 09:00 to 17:00, so the **evening** period can never be
-booked. Asking for it now lands in the fallback rather than dead-ending.
-
-The location is always read back before moving on ("Let me confirm: 88 Berry St,
-Brooklyn, NY 11211. Is that correct?"), and the ZIP is turned into coordinates by
-`app/geo.py`, a small stand-in for a geocoding service covering the 20 New York
-ZIPs in the data. Swap it for a real geocoding call when you have a key.
-
-Every model reply is parsed into a pydantic model (`agents/nextdim/llm.py` retries
-once with the validation error), so a malformed answer cannot move the
-conversation forward.
-
-Agents live one per folder under `agents/`, so a second one is just
-`agents/<name>/` with its own prompts. When there is more than one, move
-`llm.py` up to `agents/llm.py` and the folder that shares it.
-
-## Tools
+Do not overwrite your current `data/vast.db` with the ZIP's supplied snapshot.
+Stop the application during deployment. Make a consistent SQLite backup before
+startup performs the migration. For example, from the repository root:
 
 ```python
-from tools.available_slots import available_slots
-from tools.book import book_appointment
-from tools.match_clinics import suggest_clinics
+from contextlib import closing
+from pathlib import Path
+import sqlite3
 
-available_slots(clinic_id=4)                 # free slots, whole window
-available_slots(clinic_id=4, day="2026-09-30")   # free slots, one day
-book_appointment(clinic_id=4, patient_id=7, slot_date="2026-09-30", start_time="09:30")
-suggest_clinics(patient_id=7, day="2026-09-30", limit=3)   # needs OPENAI_API_KEY
+source = Path("data/vast.db").resolve()
+target = Path("data/vast-before-v0.2.db")
+if not source.is_file():
+    raise FileNotFoundError(source)
+# Exclusive creation prevents accidentally overwriting an earlier backup.
+with target.open("xb"):
+    pass
+try:
+    with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src:
+        with closing(sqlite3.connect(target)) as dst:
+            src.backup(dst)
+except Exception:
+    target.unlink(missing_ok=True)
+    raise
 ```
 
-Same three from the command line:
+Run the read-only preflight:
 
 ```bash
-make slots CLINIC=4 DATE=2026-09-30
-make book  CLINIC=4 PATIENT=7 DATE=2026-09-30 TIME=09:30
-make match PATIENT=7 DATE=2026-09-30
+python -m scripts.audit_phones
 ```
 
-`book_appointment` returns `{"ok": False, "error": ...}` if the slot is taken, is
-not a real slot, or the patient/clinic is unknown. Three things stop two
-concurrent callers from taking the same slot: the `threading.Lock` in
-`tools/book.py`, `BEGIN IMMEDIATE` (SQLite write lock taken before reading), and
-the UNIQUE index. A race ends with one `ok: True` and the rest
-`UNIQUE constraint failed`.
+The supplied snapshot contains 104 patients: 3 valid, normalizable phone numbers
+and 101 incomplete numbers missing area-code digits. Those 101 values cannot be
+converted safely. Startup preserves their original values/reasons in
+`patient_phone_issues`, sets the active `patients.phone` value to NULL, and requires
+contact recovery under the configured verification policy. It does not invent digits. The migration normalizes
+valid phones, retains all other patient fields and bookings, preserves foreign
+keys, and is idempotent. A corrected phone removes its repair entry.
 
-`suggest_clinics` sorts clinics by real distance (haversine, in
-`tools/match_clinics.py`) and sends the nearest 8 with their free slots to the
-LLM, which returns JSON: `[{"clinic_id", "reason", "suggested_slots"}, ...]`. The
-name, speciality and distance are filled back in from the shortlist, so an id
-the model invented is dropped rather than shown. Override the model with
-`VAST_MODEL`. Because the shortlist is distance-based, a speciality that only
-exists far away is not offered.
+The CSV files have not been edited either. The optional demo importer applies the
+same normalization/quarantine rules. **Do not run `app.ingest`, `make reingest`,
+`make reset` or `make clean` against an existing installation as part of this
+upgrade:** these are demo data replacement/deletion commands, not migrations.
+The included SQL migration is tested against the supplied schema; custom schema
+extensions require review before running the table rebuild.
 
-`nearest_clinics` is the same distance ranking without the model call or the
-day, which is what the fully-booked fallback uses.
+## Patient and contact flow
 
-## Layout
+1. Collect name, email and phone without format instructions in the greeting.
+   Validate entered contacts locally before lookup. Incorrect values receive the
+   entered value and the required format; other valid intake fields are retained.
+2. With verification disabled, an exact contact match reads the record back for
+   confirmation. With verification enabled, the existing email-code step runs first.
+3. A partial match collects both updated contacts, reads them back, and requires
+   explicit confirmation before an atomic update. Invalid corrections block saving
+   an earlier proposal. Email verification is added only when enabled.
+4. Ambiguous/shared contacts do not choose an account. `recover account` asks for
+   the email on file. Two entirely changed contacts cannot identify an account by name.
+5. Returning users can view all their bookings, book an appointment, view clinics,
+   or end the chat.
 
+Chat phone input must contain exactly **10 national digits**. Spaces, parentheses
+and hyphens are accepted, but country prefixes, extensions and wrong digit counts
+are rejected with guidance. The supplied US/Canada configuration converts
+`(212) 555-0100` into `+12125550100` before lookup or persistence. The storage/tool
+normalizer still preserves existing international records; the new ten-digit
+chat-entry rule does not rewrite the database. Non-US/Canada chat entry requires
+an explicit country-input policy change, not guessed digits or a guessed country.
+
+Emails use ordinary `name@example.com` syntax, including plus aliases and
+subdomains. Missing/duplicate @, whitespace, invalid dots and malformed domain
+labels are rejected. Quoted local parts, IP literals and internationalized
+addresses are not supported. Validation does not prove mailbox or phone ownership,
+reachability, or assignment; no DNS lookup or SMS verification was added.
+
+When email verification is enabled, codes expire after ten minutes, allow five
+attempts, and are single-use. Resends have a 60-second minimum interval and a
+five-per-hour limit per destination within this process. An inaccessible existing
+mailbox requires clinic-assisted recovery.
+
+## Confirmation and date buttons
+
+Address checks, patient details, complaint restatements and contact updates have
+confirm/edit buttons. Displayed appointments have selection buttons; the booking
+read-back offers **Confirm booking**, **Choose another slot** and **Change date**.
+Choosing a slot does not book it. Clicking Confirm booking uses the same guarded
+booking path as a typed confirmation, without an LLM round trip.
+
+Natural replies such as `I confirm this slot` are classified against the selected
+appointment. Explicit changes are routed to scheduling. Unclear responses or model
+failures keep the selected appointment unbooked, instead of re-running the search.
+Availability and the final atomic write remain application responsibilities.
+
+During scheduling, up to seven allowed dates are displayed with weekdays and ISO
+dates. Before 12:00 clinic-local time, Today is eligible; at/after 12:00 the shortcuts
+start from tomorrow. Dates outside `VAST_FIRST_DAY` / `VAST_BOOKING_DAYS` are excluded.
+Idle-browser buttons expire at noon and relative labels update at midnight without
+changing their absolute date payload. These are shortcuts, not guaranteed openings.
+Explicitly typed same-day requests still use the existing future-slot availability
+rules; this is not a new prohibition on all afternoon same-day bookings.
+
+Morning, Afternoon and Any time buttons retain the selected date range. Long chats
+scroll the conversation pane to the latest reply rather than scrolling the page body.
+
+## Dates, times and duration
+
+Appointment dates are resolved by application code, not by the language model.
+The supplied New York dataset uses `America/New_York`, including daylight-saving
+transitions. Relative dates follow that clock, not the browser's timezone or UTC.
+
+Supported examples include `today`, `tomorrow morning`, `day after tomorrow`,
+`in two days`, `Friday`, `next Friday`, `this week`, `next weekend`,
+`Wednesday through Friday`, `2026-10-02`, and `2 October 2026`.
+
+Weeks run Monday through Sunday. A bare weekday is its next occurrence, including
+today; `this Friday` means the current calendar week's Friday; `next Friday`
+means next calendar week's Friday. `this week` searches the remaining days.
+Explicit dates without a year use the current clinic-local year; past dates are
+not silently pushed into the following year. Numeric slash dates, conflicting
+date/weekday combinations, unsupported before/after boundaries and ambiguous
+clock times ask for clarification. English is the supported parsing language.
+
+The default booking window is rolling today plus the next 13 days. Set
+`VAST_BOOKING_DAYS` to change its length. Leave `VAST_FIRST_DAY` empty for normal
+operation; a fixed demo start is optional. Existing opening hours remain 09:00 to
+17:00, with 30-minute grid increments. There is no holiday/provider-roster engine.
+Same-day slots that have passed are omitted and rejected again on confirmation.
+
+The chat never silently widens a requested date range. When only part of a range
+fits the available window, the displayed search range states the actual dates.
+An explicit time is used for ranking; nearby times can be offered, but their exact
+start/end are displayed and require selection and confirmation. Slot lists,
+confirmation and booking receipts contain the weekday, ISO date, start/end and
+timezone. Example: `Friday 2026-10-02, 10:00 to 11:00 America/New_York time`.
+
+The default duration is 30 minutes. A request for two people produces:
+
+> I am trying to find a slot for 1 hour.
+
+It reserves one continuous 60-minute interval as **one booking record** for the
+verified patient, rather than creating a second patient or dependent appointment.
+A request exceeding one hour is refused. Both halves of a one-hour interval must
+be free, fit before closing, and pass an interval-overlap recheck in the write
+transaction. Headcount is not proactively requested or discussed by the replies.
+
+## Ending and restarting
+
+An **End chat** button is available throughout active conversation stages. Text
+such as `end chat`, `please end the chat`, `quit` and `bye` uses the same flow.
+Before an appointment is created, the bot asks once whether to end without
+booking: Yes closes; No restores the prior step. Ending a chat never cancels an
+existing appointment.
+
+A successful booking returns its receipt and `done=true` immediately. No second
+end confirmation is required. Input/actions are disabled, replayed confirmations
+cannot create another booking, and **New chat** creates a fresh session. Failed
+bookings keep the flow open for another explicit choice.
+
+## Booking history and clinics
+
+A returning user verifies their account before personal history is returned.
+**View all my bookings** retrieves that patient's bookings across all clinics,
+including past, future, completed and cancelled records, with clinic details,
+weekday/date/timezone and status. **View all clinics** is a separate complete
+clinic directory. Patient identity comes from the verified session, not a patient
+ID supplied in chat. This is history display, not appointment cancellation.
+
+The chat response retains its original fields and adds:
+
+```json
+{
+  "actions": [{"label": "End chat", "message": "end chat"}],
+  "bookings": null
+}
 ```
-app/config.py      settings from the environment or .env
-app/db.py          connection helper (connect, init_db) + schema
-app/geo.py         New York ZIP -> coordinates (stand-in for a geocoder)
-app/ingest.py      validate + load data/*.csv into SQLite
-app/main.py        FastAPI app
-app/chat.py        the chat endpoints, returning the reply with its trace
-app/sessions.py    one agent per browser tab, in memory
-app/trace.py       the event shape the agent and tools report on
-app/static/index.html  the chat page
-domain/models.py   pydantic models: Clinic, Patient, Booking, Complaint,
-                   PatientIntake, Location, Availability, SlotOption
-agents/nextdim/agent.py  the NextDim portal conversation
-agents/nextdim/llm.py    OpenAI -> JSON that fits a pydantic model
-tools/available_slots.py  free slots of a clinic
-tools/book.py             book a slot, locked
-tools/match_clinics.py    nearest clinics ranked by OpenAI
-Makefile          venv, install, run, agent, ingest, slots, book, match, reset, clean
+
+`bookings` becomes the verified patient's list after a history request. The
+singular `booking` field still describes a booking created in this chat.
+
+## Code boundaries
+
+```text
+HTTP/UI -> ChatService -> NextDimAgent / flow controls / step handlers
+                               |
+                               +-> domain phone/models and deterministic dates/duration
+                               +-> tools -> services -> repository protocols
+                               |                       -> SQLite adapters
+                               +-> VerificationService -> CodeSender -> SMTPCodeSender
 ```
 
-## Versions
+`domain/phone.py` owns canonicalization. `services/identity.py` owns match
+classification; `services/verification.py` owns challenges; `steps/account.py`
+owns account conversation transitions. `services/date_resolver.py` and
+`services/duration.py` own deterministic interpretation. SQL remains in
+`repositories/`, including the scoped history query and interval-overlap check.
+Pure helpers stay functions; classes are used for dependencies and stateful rules.
 
-| version | what it added |
-| --- | --- |
-| 0.1.0 | first release: the NextDim conversation, the three tools, the chat UI and the trace |
+See `documents/UPDATE_V0_2_1.md` for the current change map and limitations.
+New boundaries: `services/contact_input.py` validates raw contacts;
+`agents/nextdim/booking_intent.py` interprets selected-slot consent;
+`services/date_shortcuts.py` owns the noon/range policy;
+`agents/nextdim/actions.py` builds actions; `app/static/chat-actions.js` renders them.
+
+## Validation
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+Tests use temporary databases, scripted model replies, frozen clocks and an
+injected test-only email sender. They do not contact OpenAI or SMTP. If the SDK is
+not importable in an offline environment, use:
+
+```bash
+VAST_TEST_STUB_OPENAI=1 python -m pytest -q
+```
+
+That switch installs an import stub only inside pytest. It is not a production
+OTP or authentication bypass. See `tests/README.md` and the measured reports in
+`documents/`. Live SDK/SMTP integration, the supplied dependency pins, and a
+production authentication deployment still require validation in your environment.

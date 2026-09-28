@@ -10,7 +10,8 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import MODEL, OPENAI_API_KEY
 from app.trace import MODEL as MODEL_EVENT
-from app.trace import emit
+from app.trace import emit, NOTE
+from domain.phone import PhoneNumberError
 
 # One try, then one retry carrying the validation error, so a reply that does
 # not fit the model cannot move the conversation forward.
@@ -40,13 +41,15 @@ def ask(
         {"role": "system", "content": system},
         {"role": "user", "content": json.dumps(payload)},
     ]
+    sensitive = model.__name__ in {"PatientIntake", "PatientUpdate", "IntakeDraft", "UpdateDraft"}
+    phone_error = False
     for attempt in range(1, ATTEMPTS + 1):
         emit(
             on_event,
             MODEL_EVENT,
             label or f"Fill in a {model.__name__}",
             step_detail=system,
-            input=payload,
+            input={"redacted": True} if sensitive else payload,
             model=MODEL,
             attempt=attempt,
         )
@@ -57,12 +60,13 @@ def ask(
         try:
             parsed = model.model_validate_json(content)
         except ValidationError as error:
+            phone_error = any("phone" in e["loc"] for e in error.errors())
             emit(
                 on_event,
                 NOTE,
                 "The reply did not fit, asking again with the error",
-                reply=content,
-                error=str(error),
+                reply="[redacted]" if sensitive else content,
+                error="Invalid contact data" if sensitive else str(error),
                 attempt=attempt,
             )
             messages.append({"role": "assistant", "content": content})
@@ -70,6 +74,9 @@ def ask(
                 {"role": "user", "content": f"Rejected: {error}. Reply with valid JSON only."}
             )
             continue
-        emit(on_event, MODEL_EVENT, "The model answered", reply=content, output=parsed.model_dump(mode="json"))
+        emit(on_event, MODEL_EVENT, "The model answered", reply="[redacted]" if sensitive else content,
+             output={"redacted": True} if sensitive else parsed.model_dump(mode="json"))
         return parsed
+    if phone_error:
+        raise PhoneNumberError("Please provide a full phone number, such as +12125550100, without an extension.")
     raise ValueError("the model did not return usable JSON")

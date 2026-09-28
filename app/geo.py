@@ -1,8 +1,15 @@
-"""Stand-in for a geocoding service: New York ZIP code -> coordinates.
+"""Stand-in for a geocoding service: New York ZIP code -> coordinates and zone.
 
 Only the ZIP codes used in the sample data are known. Replace with a real
 geocoding call when you have an API key.
 """
+
+from zoneinfo import ZoneInfo
+
+# Every clinic and patient in the sample data is in New York, so every time in
+# this application is read in this zone rather than in UTC. A ZIP from another
+# state is one line in ZONES below, and everything that reads a time follows it.
+DEFAULT_ZONE = "America/New_York"
 
 ZIPS = {
     "10001": (40.7549, -73.9844),
@@ -28,6 +35,26 @@ ZIPS = {
 }
 
 
+ZONES = {zip_code: DEFAULT_ZONE for zip_code in ZIPS}
+
+
 def coordinates_of(zip_code: str) -> tuple[float, float] | None:
     """Approximate coordinates of a New York ZIP, or None if it is not known."""
     return ZIPS.get(str(zip_code).strip())
+
+
+def zone_of(zip_code: str | None) -> ZoneInfo:
+    """The timezone a ZIP's clocks run in.
+
+    This is the zone every time the patient hears and every time the model is
+    asked about is read in, so "Monday morning" means the same thing to the
+    patient, to the model and to the clinic that is being offered the slot. An
+    unknown or missing ZIP falls back to the portal's own zone, which is what a
+    patient who has not given an address yet gets.
+    """
+    return ZoneInfo(ZONES.get(str(zip_code).strip(), DEFAULT_ZONE))
+
+
+def zone_name_of(zip_code: str | None) -> str:
+    """The name of the timezone a ZIP is in, for showing to a patient."""
+    return zone_of(zip_code).key
