@@ -2,11 +2,9 @@
 
 ### Working Video Demo
 
-<video src="vast.mp4" controls width="100%">
-  Your browser does not support the video tag. <a href="vast.mp4">Download vast.mp4</a> to watch the working demo video.
-</video>
+[▶️ Click here to watch/download the working demo video (vast.mp4)](https://github.com/mohit-rathod/VAST/raw/main/vast.mp4)
 
-*Watch the working video demo above (`vast.mp4`) showing the FastAPI healthcare scheduling agent, typed chat, and real-time voice interface in action.*
+*FastAPI healthcare scheduling agent with typed chat and real-time voice interface.*
 
 ---
 
